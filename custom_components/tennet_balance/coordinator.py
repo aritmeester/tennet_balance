@@ -8,19 +8,10 @@ LOGGER = logging.getLogger(__name__)
 
 class TennetCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, api):
-        super().__init__(hass, LOGGER, name="TenneT Balance Delta", update_interval=None)
+        super().__init__(hass, LOGGER, name="TenneT Balance Delta", update_interval=timedelta(seconds=12))
         self.api = api
-        self._remove_listener = None
 
     async def _async_update_data(self):
+        LOGGER.warning("TennetCoordinator: _async_update_data aangeroepen voor refresh!")
         data = await self.api.get_latest()
-        point = data["Response"]["TimeSeries"][0]["Period"][0]["points"][-1]
-        end_ts = parse_datetime(point["timeInterval_end"])
-        delay = max((end_ts + timedelta(seconds=1) - utcnow()).total_seconds(), 1)
-        if self._remove_listener:
-            self._remove_listener()
-        self._remove_listener = async_call_later(
-            self.hass, delay,
-            lambda _: self.hass.async_create_task(self.async_request_refresh())
-        )
         return data
