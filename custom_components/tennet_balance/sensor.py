@@ -31,4 +31,10 @@ class TennetPointSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         point = self.coordinator.data["Response"]["TimeSeries"][0]["Period"][0]["points"][-1]
-        return float(point[self.key])
+        value = point.get(self.key)
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
