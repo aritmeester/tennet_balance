@@ -39,3 +39,14 @@ class TennetPointSensor(CoordinatorEntity, SensorEntity):
             return float(value)
         except (TypeError, ValueError):
             return None
+        
+    @property
+    def extra_state_attributes(self):
+        point = self.coordinator.data["Response"]["TimeSeries"][0]["Period"][0]["points"][-1]
+
+        attrs = {
+            "start": point["timeInterval_start"],
+            "end": point["timeInterval_end"],
+        }
+
+        return attrs
