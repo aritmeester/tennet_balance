@@ -40,6 +40,8 @@ Copy `custom_components/tennet_balance` into your Home Assistant config director
 You need:
 - A TenneT API key
 
+An API key can be created via https://developer.tennet.eu/api-keys.\n\nMake sure the API key is created for the selected environment.\n\nTo create an API key, a developer account is required, which can be requested via https://developer.tennet.eu/register/. Approval of a developer account may take several days.
+
 Configuration is done via the UI.
 
 ## Sensors
