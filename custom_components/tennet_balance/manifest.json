@@ -1,10 +1,10 @@
 {
   "domain": "tennet_balance",
   "name": "TenneT Balance Delta High Resolution",
-  "version": "0.1.0",
-  "documentation": "https://github.com/aritmeester/tennet_balance",
-  "issue_tracker": "https://github.com/aritmeester/tennet_balance/issues",
+  "codeowners": ["@aritmeester"],
   "config_flow": true,
+  "documentation": "https://github.com/aritmeester/tennet_balance",
   "iot_class": "cloud_polling",
-  "codeowners": ["@aritmeester"]
+  "issue_tracker": "https://github.com/aritmeester/tennet_balance/issues",
+  "version": "2601.7.0b1"
 }
