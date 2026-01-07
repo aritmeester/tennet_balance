@@ -19,6 +19,7 @@ class TennetPointSensor(CoordinatorEntity, SensorEntity):
         self._attr_native_unit_of_measurement = meta.get("unit")
         self._attr_device_class = meta.get("device_class")
         self._attr_state_class = meta.get("state_class")
+        self._attr_icon = meta.get("icon")
 
     @property
     def device_info(self):
