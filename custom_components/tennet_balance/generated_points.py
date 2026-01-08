@@ -1,8 +1,8 @@
 # Auto-generated placeholder. Run scripts/generate_points.py to regenerate.
 GENERATED_SENSOR_DESCRIPTIONS = {
     "mid_price": {"name": "Balance Mid Price"},
-    "power_afrr_in": {"name": "AFRR Power In"},
-    "power_afrr_out": {"name": "AFRR Power Out"},
+    "power_afrr_in": {"name": "aFRR Power In"},
+    "power_afrr_out": {"name": "aFRR Power Out"},
     "power_igcc_in": {"name": "IGCC Power In"},
     "power_igcc_out": {"name": "IGCC Power Out"},
     "power_mari_in": {"name": "MARI Power In"},
