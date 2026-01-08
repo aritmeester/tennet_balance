@@ -31,7 +31,9 @@ class TennetPointSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        point = self.coordinator.data["Response"]["TimeSeries"][0]["Period"][0]["points"][-1]
+        point = self.coordinator.latest_point
+        if not point:
+            return None
         value = point.get(self.key)
         if value is None:
             return None
@@ -42,11 +44,11 @@ class TennetPointSensor(CoordinatorEntity, SensorEntity):
         
     @property
     def extra_state_attributes(self):
-        point = self.coordinator.data["Response"]["TimeSeries"][0]["Period"][0]["points"][-1]
-
+        point = self.coordinator.latest_point
+        if not point:
+            return {}
         attrs = {
             "start": point["timeInterval_start"],
             "end": point["timeInterval_end"],
         }
-
         return attrs

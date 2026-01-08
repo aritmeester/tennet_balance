@@ -11,6 +11,13 @@ class TennetCoordinator(DataUpdateCoordinator):
         super().__init__(hass, LOGGER, name="TenneT Balance Delta", update_interval=timedelta(seconds=12))
         self.api = api
 
+    @property
+    def latest_point(self):
+        try:
+            return self.data["Response"]["TimeSeries"][0]["Period"][0]["points"][-1]
+        except (KeyError, IndexError, TypeError):
+            return None
+
     async def _async_update_data(self):
         LOGGER.warning("TennetCoordinator: _async_update_data aangeroepen voor refresh!")
         data = await self.api.get_latest()
