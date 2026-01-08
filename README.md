@@ -5,6 +5,8 @@
 [![GitHub Issues](https://img.shields.io/github/issues/aritmeester/tennet_balance)](https://github.com/aritmeester/tennet_balance/issues)
 
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=aritmeester&repository=tennet_balance&category=integration)
+
 Home Assistant custom integration for the TenneT Balance Delta High Resolution API.
 
 This integration retrieves near real-time balancing market data and exposes all numeric values as Home Assistant sensors.
