@@ -13,12 +13,13 @@ class TennetCoordinator(DataUpdateCoordinator):
 
     @property
     def latest_point(self):
+        LOGGER.debug("TennetCoordinator: Accessing latest_point")
         try:
             return self.data["Response"]["TimeSeries"][0]["Period"][0]["points"][-1]
         except (KeyError, IndexError, TypeError):
             return None
 
     async def _async_update_data(self):
-        LOGGER.warning("TennetCoordinator: _async_update_data aangeroepen voor refresh!")
+        LOGGER.debug("TennetCoordinator: _async_update_data called for refresh!")
         data = await self.api.get_latest()
         return data
