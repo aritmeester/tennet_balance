@@ -21,18 +21,15 @@ class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
     _attr_name = "TenneT Emergency Power Activated"
     _attr_unique_id = "tennet_balance_emergency_power_activated"
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
-    
+
     def __init__(self, coordinator):
         super().__init__(coordinator)
         LOGGER.debug("EmergencyPowerActivatedSensor initialized")
 
     @property
-    def native_value(self):
-        point = getattr(self.coordinator, "latest_point", None)
-        LOGGER.debug("EmergencyPowerActivatedSensor latest_point: %s", point)
-
-        if not point:
-            return False
+    def is_on(self):
+        point = self.coordinator.data or {}
+        LOGGER.debug("EmergencyPowerActivatedSensor point: %s", point)
 
         in_val = point.get("power_mfrrda_in") or 0
         out_val = point.get("power_mfrrda_out") or 0
@@ -41,6 +38,7 @@ class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
             in_val = float(in_val)
         except (TypeError, ValueError):
             in_val = 0
+
         try:
             out_val = float(out_val)
         except (TypeError, ValueError):
@@ -50,17 +48,15 @@ class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def icon(self):
-        point = getattr(self.coordinator, "latest_point", None)
-        in_val = out_val = 0
-        if point:
-            try:
-                in_val = float(point.get("power_mfrrda_in") or 0)
-                out_val = float(point.get("power_mfrrda_out") or 0)
-            except (TypeError, ValueError):
-                pass
+        point = self.coordinator.data or {}
+        try:
+            in_val = float(point.get("power_mfrrda_in") or 0)
+            out_val = float(point.get("power_mfrrda_out") or 0)
+        except (TypeError, ValueError):
+            in_val = out_val = 0
 
         if in_val > 0 and out_val > 0:
-            return "mdi:transmission-tower-tower"
+            return "mdi:transmission-tower"
         if out_val > 0:
             return "mdi:transmission-tower-export"
         if in_val > 0:
@@ -69,9 +65,7 @@ class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def extra_state_attributes(self):
-        point = getattr(self.coordinator, "latest_point", None)
-        if not point:
-            return {}
+        point = self.coordinator.data or {}
         return {
             "in": point.get("power_mfrrda_in", 0),
             "out": point.get("power_mfrrda_out", 0),
@@ -82,7 +76,7 @@ class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
         return DeviceInfo(
             identifiers={(DOMAIN, "tennet_balance")},
             name="TenneT Balance Delta High Resolution",
-            manufacturer="TenneT"
+            manufacturer="TenneT",
         )
 
 class TennetPointSensor(CoordinatorEntity, SensorEntity):
