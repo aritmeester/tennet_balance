@@ -1,5 +1,5 @@
 DOMAIN = "tennet_balance"
-PLATFORMS = ["sensor"]
+PLATFORMS = ["sensor", "binary_sensor"]
 
 from .generated_points import GENERATED_SENSOR_DESCRIPTIONS
 
