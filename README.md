@@ -1,6 +1,6 @@
 # TenneT Balance Delta High Resolution
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Integration-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/release/aritmeester/tennet_balance.svg)](https://github.com/aritmeester/tennet_balance/releases)
 [![GitHub Issues](https://img.shields.io/github/issues/aritmeester/tennet_balance)](https://github.com/aritmeester/tennet_balance/issues)
 
@@ -16,34 +16,41 @@ This project is not affiliated with or endorsed by TenneT.
 ## Features
 
 - Fully asynchronous
-- One sensor per data point
+- One sensor per numeric data point plus a binary sensor for emergency power detection
 - HACS compatible
 - Config Flow based setup
 
 ## Installation
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=aritmeester&repository=tennet_balance&category=integration)
+[![Open your Home Assistant instance and install this integration via HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=aritmeester&repository=tennet_balance&category=integration)
+[![Open your Home Assistant instance and start setting up this integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=tennet_balance)
 
 ### HACS (recommended)
 
-1. Add this repository as a custom repository in HACS
-2. Select **Integration**
-3. Install **TenneT Balance Delta High Resolution**
-4. Restart Home Assistant
-5. Add the integration via **Settings → Devices & Services**
-
-### Manual
-
-Copy `custom_components/tennet_balance` into your Home Assistant config directory.
+1. Install **TenneT Balance Delta High Resolution** via HACS (button above).
+2. Restart Home Assistant.
+3. Add the integration via **Settings → Devices & Services** (or use the setup button above).
 
 ## Configuration
 
 You need:
 - A TenneT API key
 
-An API key can be created via https://developer.tennet.eu/api-keys. Make sure the API key is created for the selected environment. To create an API key, a developer account is required, which can be requested via https://developer.tennet.eu/register/. Approval of a developer account may take several days.
+An API key can be created via [developer.tennet.eu/api-keys](https://developer.tennet.eu/api-keys). Make sure the API key is created for the selected environment.
+
+To create an API key, a developer account is required. You can request one via [developer.tennet.eu/register](https://developer.tennet.eu/register/). Approval may take several days.
 
 Configuration is done via the UI.
+
+Available options:
+
+- `keep_last_regulation_prices`: keep the last known regulation price when the API returns `null`.
+- Update API key via **Settings → Devices & Services → TenneT Balance Delta → Configure**.
+
+### Multiple environments
+
+The integration supports both Production (`api`) and Acceptance (`api.acc`) environments.
+Only one config entry per environment is allowed.
 
 ## Sensors
 
@@ -61,43 +68,7 @@ The integration schedules the next update every 12 seconds ensuring minimal dela
 
 ## Changelog
 
-### 2623.23.1
-
-Changes since 2602.23.0:
-
-#### Fixed
-
-- Fixed emergency power binary sensor state translations by moving state labels to the correct translation key path (`entity.binary_sensor.emergency_power_activated.state`).
-- Improved readability of emergency power status wording in English and Dutch.
-
-### 2602.23.0
-
-Changes since 2602.18.0:
-
-#### Added
-
-- Added setting `keep_last_regulation_prices` in the initial setup flow and options flow.
-- Added full runtime translations (`en` and `nl`) for config flow, options flow and entity names.
-- Added translated entity naming via `translation_key` for all sensors and the binary sensor.
-- Added reauthentication flow for invalid API keys.
-- Added ability to update the API key from the options flow.
-
-#### Changed
-
-- Config entry titles now include the selected environment (e.g. Production/Acceptance), with Dutch labels when HA language is Dutch.
-- Setup now prevents duplicate entries for the same environment.
-- Entity IDs now support environment-scoped unique IDs for multi-environment setups, with backward compatibility for existing entities.
-- Price sensor labels were updated for better alphabetical grouping (`Price - ...` / `Prijs - ...`).
-- API client now uses Home Assistant's shared aiohttp session.
-
-#### Fixed
-
-- Fixed options flow crash (`config_entry` read-only property issue) by migrating to `OptionsFlowWithConfigEntry`.
-- Fixed binary sensor logic to read from `latest_point` instead of the raw API envelope.
-- Added binary sensor availability handling based on point availability.
-- Fixed invalid state class usage for monetary sensors.
-- Improved API resilience with retry/backoff for transient network/API errors.
-- Fixed auth failure handling: `401/403` now trigger `ConfigEntryAuthFailed` and reauth instead of repeated setup retries.
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## Debugging
 
