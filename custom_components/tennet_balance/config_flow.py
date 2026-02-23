@@ -1,6 +1,9 @@
 from homeassistant import config_entries
 from homeassistant.core import callback
 import voluptuous as vol
+from homeassistant.helpers import selector
+
+from .api import TennetApiClient, TennetApiAuthError
 from .const import DOMAIN, CONF_KEEP_LAST_REGULATION_PRICES
 
 class TennetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -53,12 +56,75 @@ class TennetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
 
+    async def async_step_reauth(self, entry_data):
+        self._reauth_entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input=None):
+        if user_input is not None:
+            api = TennetApiClient(
+                self.hass,
+                user_input["api_key"],
+                self._reauth_entry.data["environment"],
+            )
+            try:
+                await api.get_latest()
+            except TennetApiAuthError:
+                return self.async_show_form(
+                    step_id="reauth_confirm",
+                    data_schema=vol.Schema({
+                        vol.Required("api_key"): str,
+                    }),
+                    errors={"base": "invalid_auth"},
+                )
+            except Exception:
+                return self.async_show_form(
+                    step_id="reauth_confirm",
+                    data_schema=vol.Schema({
+                        vol.Required("api_key"): str,
+                    }),
+                    errors={"base": "cannot_connect"},
+                )
+
+            return self.async_update_reload_and_abort(
+                self._reauth_entry,
+                data_updates={
+                    "api_key": user_input["api_key"],
+                },
+            )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("api_key"): selector.TextSelector(
+                        selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+                    ),
+                }
+            ),
+        )
+
 
 class TennetOptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            new_api_key = user_input.get("api_key", "").strip()
+            if new_api_key and new_api_key != self.config_entry.data.get("api_key"):
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry,
+                    data={
+                        **self.config_entry.data,
+                        "api_key": new_api_key,
+                    },
+                )
+
+            return self.async_create_entry(
+                title="",
+                data={
+                    CONF_KEEP_LAST_REGULATION_PRICES: user_input[CONF_KEEP_LAST_REGULATION_PRICES],
+                },
+            )
 
         default_keep_last = self.config_entry.options.get(
             CONF_KEEP_LAST_REGULATION_PRICES,
@@ -67,6 +133,12 @@ class TennetOptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
+                vol.Optional(
+                    "api_key",
+                    description={"suggested_value": ""},
+                ): selector.TextSelector(
+                    selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+                ),
                 vol.Required(CONF_KEEP_LAST_REGULATION_PRICES, default=default_keep_last): bool,
             }),
         )

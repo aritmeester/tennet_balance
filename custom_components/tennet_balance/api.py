@@ -9,6 +9,10 @@ LOGGER = logging.getLogger(__name__)
 MAX_ATTEMPTS = 3
 BACKOFF_SECONDS = 0.5
 
+
+class TennetApiAuthError(Exception):
+    """Raised when authentication with the TenneT API fails."""
+
 class TennetApiClient:
     def __init__(self, hass, api_key: str, environment: str):
         self._hass = hass
@@ -23,6 +27,8 @@ class TennetApiClient:
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
                 async with session.get(url, headers=headers, timeout=30) as resp:
+                    if resp.status in (401, 403):
+                        raise TennetApiAuthError("Invalid API key or unauthorized environment")
                     if resp.status >= 400:
                         LOGGER.warning(
                             "TenneT API request failed with status %s (attempt %s/%s)",
@@ -42,4 +48,6 @@ class TennetApiClient:
                 )
             if attempt < MAX_ATTEMPTS:
                 await asyncio.sleep(BACKOFF_SECONDS * attempt)
-        raise last_error
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("Unknown error while requesting TenneT API")

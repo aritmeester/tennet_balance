@@ -1,10 +1,12 @@
 from datetime import timedelta
 import logging
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed
 import homeassistant.util.dt as dt_util
 import asyncio
 
 from .const import REGULATION_PRICE_KEYS
+from .api import TennetApiAuthError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -50,6 +52,8 @@ class TennetCoordinator(DataUpdateCoordinator):
             LOGGER.debug("TennetCoordinator: Fetching new data from API")
             try:
                 data = await self.api.get_latest()
+            except TennetApiAuthError as err:
+                raise ConfigEntryAuthFailed("Invalid API key") from err
             except Exception as err:
                 raise UpdateFailed(f"Error fetching TenneT data: {err}") from err
             self._last_request = dt_util.utcnow()

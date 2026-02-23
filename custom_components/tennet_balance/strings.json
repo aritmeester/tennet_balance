@@ -3,7 +3,17 @@
     "abort": {
       "already_configured": "An entry for this environment already exists."
     },
+    "error": {
+      "invalid_auth": "Invalid API key.",
+      "cannot_connect": "Failed to connect to the TenneT API."
+    },
     "step": {
+      "reauth_confirm": {
+        "title": "Reauthenticate TenneT API",
+        "data": {
+          "api_key": "API key"
+        }
+      },
       "user": {
         "title": "TenneT API configuration",
         "data": {
@@ -24,9 +34,11 @@
       "init": {
         "title": "TenneT API configuration",
         "data": {
+          "api_key": "API key",
           "keep_last_regulation_prices": "Keep last regulation prices"
         },
         "data_description": {
+          "api_key": "Optional. Enter a new API key to replace the current one.",
           "keep_last_regulation_prices": "When enabled, the last known value stays if the API returns null."
         }
       }

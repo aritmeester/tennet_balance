@@ -3,7 +3,17 @@
     "abort": {
       "already_configured": "Er bestaat al een configuratie voor deze omgeving."
     },
+    "error": {
+      "invalid_auth": "Ongeldige API-sleutel.",
+      "cannot_connect": "Verbinding met de TenneT API mislukt."
+    },
     "step": {
+      "reauth_confirm": {
+        "title": "TenneT API opnieuw verifiëren",
+        "data": {
+          "api_key": "API-sleutel"
+        }
+      },
       "user": {
         "title": "TenneT API configuratie",
         "data": {
@@ -24,9 +34,11 @@
       "init": {
         "title": "TenneT API configuratie",
         "data": {
+          "api_key": "API-sleutel",
           "keep_last_regulation_prices": "Laatste regulatieprijzen behouden"
         },
         "data_description": {
+          "api_key": "Optioneel. Vul een nieuwe API-sleutel in om de huidige te vervangen.",
           "keep_last_regulation_prices": "Wanneer ingeschakeld blijft de laatst bekende waarde staan als de API null teruggeeft."
         }
       }
