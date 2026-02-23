@@ -61,7 +61,13 @@
       "min_downw_regulation_price": { "name": "Prijs - Min neerwaartse regulatie" }
     },
     "binary_sensor": {
-      "emergency_power_activated": { "name": "Noodvermogen geactiveerd" }
+      "emergency_power_activated": {
+        "name": "Noodvermogen",
+        "state": {
+          "off": "Inactief",
+          "on": "Actief"
+        }
+      }
     }
   }
 }

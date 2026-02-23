@@ -61,7 +61,13 @@
       "min_downw_regulation_price": { "name": "Price - Min Downward Regulation" }
     },
     "binary_sensor": {
-      "emergency_power_activated": { "name": "Emergency Power Activated" }
+      "emergency_power_activated": {
+        "name": "Emergency Power",
+        "state": {
+          "off": "Inactive",
+          "on": "Active"
+        }
+      }
     }
   }
 }
