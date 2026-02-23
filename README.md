@@ -61,6 +61,15 @@ The integration schedules the next update every 12 seconds ensuring minimal dela
 
 ## Changelog
 
+### 2623.23.1
+
+Changes since 2602.23.0:
+
+#### Fixed
+
+- Fixed emergency power binary sensor state translations by moving state labels to the correct translation key path (`entity.binary_sensor.emergency_power_activated.state`).
+- Improved readability of emergency power status wording in English and Dutch.
+
 ### 2602.23.0
 
 Changes since 2602.18.0:
