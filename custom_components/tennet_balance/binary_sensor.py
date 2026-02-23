@@ -25,8 +25,12 @@ class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
         LOGGER.debug("EmergencyPowerActivatedSensor initialized")
 
     @property
+    def available(self):
+        return self.coordinator.latest_point is not None
+
+    @property
     def is_on(self):
-        point = self.coordinator.data or {}
+        point = self.coordinator.latest_point or {}
         LOGGER.debug("EmergencyPowerActivatedSensor point: %s", point)
 
         in_val = point.get("power_mfrrda_in") or 0
@@ -46,7 +50,7 @@ class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def icon(self):
-        point = self.coordinator.data or {}
+        point = self.coordinator.latest_point or {}
         try:
             in_val = float(point.get("power_mfrrda_in") or 0)
             out_val = float(point.get("power_mfrrda_out") or 0)
@@ -63,7 +67,7 @@ class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def extra_state_attributes(self):
-        point = self.coordinator.data or {}
+        point = self.coordinator.latest_point or {}
         return {
             "in": point.get("power_mfrrda_in", 0),
             "out": point.get("power_mfrrda_out", 0),

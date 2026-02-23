@@ -1,7 +1,7 @@
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import DeviceInfo
-from .const import DOMAIN, SENSOR_DESCRIPTIONS
+from .const import DOMAIN, SENSOR_DESCRIPTIONS, REGULATION_PRICE_KEYS
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
@@ -21,6 +21,8 @@ class TennetPointSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_class = meta.get("device_class")
         self._attr_state_class = meta.get("state_class")
         self._attr_icon = meta.get("icon")
+        if self._attr_device_class == SensorDeviceClass.MONETARY:
+            self._attr_state_class = None
 
     @property
     def device_info(self):
@@ -37,6 +39,12 @@ class TennetPointSensor(CoordinatorEntity, SensorEntity):
             return None
         value = point.get(self.key)
         if value is None:
+            if (
+                self.key in REGULATION_PRICE_KEYS
+                and self.coordinator.keep_last_regulation_prices
+                and self.coordinator.get_last_known_value(self.key) is not None
+            ):
+                return self.coordinator.get_last_known_value(self.key)
             return None
         try:
             return float(value)

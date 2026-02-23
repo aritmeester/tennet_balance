@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "TenneT API configuration",
+        "data": {
+          "environment": "Environment",
+          "api_key": "API key",
+          "keep_last_regulation_prices": "Keep last regulation prices"
+        },
+        "data_description": {
+          "environment": "Select the TenneT environment that matches your API key.",
+          "api_key": "Create an API key at https://developer.tennet.eu/api-keys and ensure it matches the selected environment.",
+          "keep_last_regulation_prices": "When enabled, the last known value stays if the API returns null."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "TenneT API configuration",
+        "data": {
+          "keep_last_regulation_prices": "Keep last regulation prices"
+        },
+        "data_description": {
+          "keep_last_regulation_prices": "When enabled, the last known value stays if the API returns null."
+        }
+      }
+    }
+  }
+}
