@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release (e.g. 2602.23.0)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate version consistency
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ inputs.version }}"
+
+          MANIFEST_VERSION=$(python -c "import json; print(json.load(open('custom_components/tennet_balance/manifest.json'))['version'])")
+          HACS_VERSION=$(python -c "import json; print(json.load(open('hacs.json'))['version'])")
+
+          if [ "$MANIFEST_VERSION" != "$VERSION" ]; then
+            echo "manifest.json version ($MANIFEST_VERSION) does not match input ($VERSION)"
+            exit 1
+          fi
+
+          if [ "$HACS_VERSION" != "$VERSION" ]; then
+            echo "hacs.json version ($HACS_VERSION) does not match input ($VERSION)"
+            exit 1
+          fi
+
+      - name: Extract release notes from README changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ inputs.version }}"
+
+          python - << 'PY'
+          from pathlib import Path
+
+          version = "${{ inputs.version }}"
+          readme = Path("README.md").read_text(encoding="utf-8").splitlines()
+
+          start = None
+          for idx, line in enumerate(readme):
+              if line.strip() == f"### {version}":
+                  start = idx + 1
+                  break
+
+          if start is None:
+              raise SystemExit(f"Could not find changelog section '### {version}' in README.md")
+
+          notes = []
+          for line in readme[start:]:
+              if line.startswith("### "):
+                  break
+              notes.append(line)
+
+          while notes and not notes[0].strip():
+              notes.pop(0)
+          while notes and not notes[-1].strip():
+              notes.pop()
+
+          if not notes:
+              raise SystemExit(f"Changelog section for {version} is empty")
+
+          Path("RELEASE_NOTES.md").write_text("\n".join(notes) + "\n", encoding="utf-8")
+          PY
+
+      - name: Create and push tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v${{ inputs.version }}"
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists locally"
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists on origin"
+            exit 1
+          fi
+
+          git tag "$TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: v${{ inputs.version }}
+          body_path: RELEASE_NOTES.md
