@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "TenneT API configuratie",
+        "data": {
+          "environment": "Omgeving",
+          "api_key": "API-sleutel",
+          "keep_last_regulation_prices": "Laatste regulatieprijzen behouden"
+        },
+        "data_description": {
+          "environment": "Selecteer de TenneT-omgeving die bij je API-sleutel past.",
+          "api_key": "Maak een API-sleutel aan via https://developer.tennet.eu/api-keys en zorg dat deze overeenkomt met de geselecteerde omgeving.",
+          "keep_last_regulation_prices": "Wanneer ingeschakeld blijft de laatst bekende waarde staan als de API null teruggeeft."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "TenneT API configuratie",
+        "data": {
+          "keep_last_regulation_prices": "Laatste regulatieprijzen behouden"
+        },
+        "data_description": {
+          "keep_last_regulation_prices": "Wanneer ingeschakeld blijft de laatst bekende waarde staan als de API null teruggeeft."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "mid_price": { "name": "Prijs - Onbalans midden" },
+      "power_afrr_in": { "name": "aFRR vermogen in" },
+      "power_afrr_out": { "name": "aFRR vermogen uit" },
+      "power_igcc_in": { "name": "IGCC vermogen in" },
+      "power_igcc_out": { "name": "IGCC vermogen uit" },
+      "power_mari_in": { "name": "MARI vermogen in" },
+      "power_mari_out": { "name": "MARI vermogen uit" },
+      "power_mfrrda_in": { "name": "mFRRda vermogen in" },
+      "power_mfrrda_out": { "name": "mFRRda vermogen uit" },
+      "power_picasso_in": { "name": "PICASSO vermogen in" },
+      "power_picasso_out": { "name": "PICASSO vermogen uit" },
+      "max_upw_regulation_price": { "name": "Prijs - Max opwaartse regulatie" },
+      "min_downw_regulation_price": { "name": "Prijs - Min neerwaartse regulatie" }
+    },
+    "binary_sensor": {
+      "emergency_power_activated": { "name": "Noodvermogen geactiveerd" }
+    }
+  }
+}

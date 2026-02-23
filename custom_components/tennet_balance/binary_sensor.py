@@ -16,7 +16,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
     _attr_entity_registry_enabled_default = True
-    _attr_name = "TenneT Emergency Power Activated"
+    _attr_has_entity_name = True
+    _attr_translation_key = "emergency_power_activated"
     _attr_unique_id = "tennet_balance_emergency_power_activated"
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
 

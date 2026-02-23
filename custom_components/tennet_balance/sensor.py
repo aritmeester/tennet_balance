@@ -9,13 +9,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
     async_add_entities(sensors, update_before_add=True)
 
 class TennetPointSensor(CoordinatorEntity, SensorEntity):
+    _attr_has_entity_name = True
+
     async def async_update(self):
         await self.coordinator.async_request_refresh()
 
     def __init__(self, coordinator, key, meta):
         super().__init__(coordinator)
         self.key = key
-        self._attr_name = meta["name"]
+        self._attr_translation_key = key
         self._attr_unique_id = f"tennet_balance_{key}"
         self._attr_native_unit_of_measurement = meta.get("unit")
         self._attr_device_class = meta.get("device_class")
