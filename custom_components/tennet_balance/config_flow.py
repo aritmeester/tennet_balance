@@ -6,23 +6,45 @@ from .const import DOMAIN, CONF_KEEP_LAST_REGULATION_PRICES
 class TennetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
+    def _env_labels(self) -> dict[str, str]:
+        language = (self.hass.config.language if self.hass else "en") or "en"
+        if language.lower().startswith("nl"):
+            return {
+                "api": "Productie",
+                "api.acc": "Acceptatie",
+            }
+        return {
+            "api": "Production",
+            "api.acc": "Acceptance",
+        }
+
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
         return TennetOptionsFlowHandler(config_entry)
 
     async def async_step_user(self, user_input=None):
-        if user_input is not None:
-            return self.async_create_entry(title="TenneT Balance Delta", data=user_input)
+        env_labels = self._env_labels()
 
-        ENV_LABELS = {
-            "api": "Production",
-            "api.acc": "Acceptance"
-        }
+        if user_input is not None:
+            environment = user_input["environment"]
+            await self.async_set_unique_id(environment)
+            self._abort_if_unique_id_configured()
+
+            for entry in self._async_current_entries():
+                if entry.data.get("environment") == environment:
+                    return self.async_abort(reason="already_configured")
+
+            environment_label = env_labels.get(environment, environment)
+            return self.async_create_entry(
+                title=f"TenneT Balance Delta ({environment_label})",
+                data=user_input,
+            )
+
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required("environment", default="api"): vol.In({k: v for k, v in ENV_LABELS.items()}),
+                vol.Required("environment", default="api"): vol.In({k: v for k, v in env_labels.items()}),
                 vol.Required("api_key", description={"suggested_value": ""}): str,
                 vol.Required(CONF_KEEP_LAST_REGULATION_PRICES, default=False): bool,
             }),

@@ -1,5 +1,8 @@
 {
   "config": {
+    "abort": {
+      "already_configured": "Er bestaat al een configuratie voor deze omgeving."
+    },
     "step": {
       "user": {
         "title": "TenneT API configuratie",

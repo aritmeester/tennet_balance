@@ -1,5 +1,8 @@
 {
   "config": {
+    "abort": {
+      "already_configured": "An entry for this environment already exists."
+    },
     "step": {
       "user": {
         "title": "TenneT API configuration",

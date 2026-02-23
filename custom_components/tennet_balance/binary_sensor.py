@@ -3,6 +3,7 @@ import logging
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN
 
@@ -11,18 +12,67 @@ LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([EmergencyPowerActivatedSensor(coordinator)], update_before_add=True)
+    environment_slug = entry.data["environment"].replace(".", "_")
+    entity_registry = er.async_get(hass)
+
+    legacy_sensor_entity_id = entity_registry.async_get_entity_id(
+        "sensor", DOMAIN, "tennet_balance_mid_price"
+    )
+    legacy_sensor_entry = (
+        entity_registry.async_get(legacy_sensor_entity_id)
+        if legacy_sensor_entity_id is not None
+        else None
+    )
+    use_legacy_device_identifier = (
+        legacy_sensor_entry is not None
+        and legacy_sensor_entry.config_entry_id == entry.entry_id
+    )
+    device_identifier = (
+        "tennet_balance"
+        if use_legacy_device_identifier
+        else f"tennet_balance_{environment_slug}"
+    )
+
+    legacy_unique_id = "tennet_balance_emergency_power_activated"
+    legacy_entity_id = entity_registry.async_get_entity_id(
+        "binary_sensor", DOMAIN, legacy_unique_id
+    )
+    legacy_entry = entity_registry.async_get(legacy_entity_id) if legacy_entity_id else None
+    use_legacy_unique_id = legacy_entry is not None and legacy_entry.config_entry_id == entry.entry_id
+
+    async_add_entities(
+        [
+            EmergencyPowerActivatedSensor(
+                coordinator,
+                environment_slug,
+                device_identifier,
+                use_legacy_unique_id,
+            )
+        ],
+        update_before_add=True,
+    )
 
 
 class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
     _attr_entity_registry_enabled_default = True
     _attr_has_entity_name = True
     _attr_translation_key = "emergency_power_activated"
-    _attr_unique_id = "tennet_balance_emergency_power_activated"
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
 
-    def __init__(self, coordinator):
+    def __init__(
+        self,
+        coordinator,
+        environment_slug: str,
+        device_identifier: str,
+        use_legacy_unique_id: bool,
+    ):
         super().__init__(coordinator)
+        self._device_identifier = device_identifier
+        self._attr_unique_id = (
+            "tennet_balance_emergency_power_activated"
+            if use_legacy_unique_id
+            else f"tennet_balance_{environment_slug}_emergency_power_activated"
+        )
         LOGGER.debug("EmergencyPowerActivatedSensor initialized")
 
     @property
@@ -77,7 +127,7 @@ class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def device_info(self):
         return DeviceInfo(
-            identifiers={(DOMAIN, "tennet_balance")},
+            identifiers={(DOMAIN, self._device_identifier)},
             name="TenneT Balance Delta High Resolution",
             manufacturer="TenneT",
         )
