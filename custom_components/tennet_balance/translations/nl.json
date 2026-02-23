@@ -23,7 +23,7 @@
         },
         "data_description": {
           "environment": "Selecteer de TenneT-omgeving die bij je API-sleutel past.",
-          "api_key": "Maak een API-sleutel aan via https://developer.tennet.eu/api-keys en zorg dat deze overeenkomt met de geselecteerde omgeving.",
+          "api_key": "Maak een API-sleutel aan via {api_keys_url} en zorg dat deze overeenkomt met de geselecteerde omgeving.",
           "keep_last_regulation_prices": "Wanneer ingeschakeld blijft de laatst bekende waarde staan als de API null teruggeeft."
         }
       }

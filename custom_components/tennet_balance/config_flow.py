@@ -52,7 +52,7 @@ class TennetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_KEEP_LAST_REGULATION_PRICES, default=False): bool,
             }),
             description_placeholders={
-                "api_key": "An API key can be created via https://developer.tennet.eu/api-keys.\n\nMake sure the API key is created for the selected environment.\n\nTo create an API key, a developer account is required, which can be requested via https://developer.tennet.eu/register/. Approval of a developer account may take several days."
+                "api_keys_url": "https://developer.tennet.eu/api-keys"
             }
         )
 
