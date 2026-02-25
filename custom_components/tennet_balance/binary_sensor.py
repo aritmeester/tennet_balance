@@ -47,7 +47,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 environment_slug,
                 device_identifier,
                 use_legacy_unique_id,
-            )
+            ),
         ],
         update_before_add=True,
     )

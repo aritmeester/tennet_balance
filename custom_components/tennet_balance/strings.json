@@ -58,7 +58,28 @@
       "power_picasso_in": { "name": "PICASSO Power In" },
       "power_picasso_out": { "name": "PICASSO Power Out" },
       "max_upw_regulation_price": { "name": "Price - Max Upward Regulation" },
-      "min_downw_regulation_price": { "name": "Price - Min Downward Regulation" }
+      "min_downw_regulation_price": { "name": "Price - Min Downward Regulation" },
+      "regulation_state_previous_isp": {
+        "name": "Regulation State - Previous Quarter-Hour",
+        "state": {
+          "down": "Downward (-1)",
+          "neutral": "Neutral (0)",
+          "up": "Upward (1)",
+          "both": "Both (2)"
+        }
+      },
+      "regulation_state_current_isp_prediction": {
+        "name": "Regulation State - Current Quarter-Hour Prediction",
+        "state": {
+          "down": "Downward (-1)",
+          "neutral": "Neutral (0)",
+          "up": "Upward (1)",
+          "both": "Both (2)"
+        }
+      },
+      "api_last_success": { "name": "API - Last Successful Update" },
+      "api_response_time": { "name": "API - Response Time" },
+      "api_consecutive_failures": { "name": "API - Consecutive Failures" }
     },
     "binary_sensor": {
       "emergency_power_activated": {

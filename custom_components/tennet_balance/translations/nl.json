@@ -58,7 +58,28 @@
       "power_picasso_in": { "name": "PICASSO vermogen in" },
       "power_picasso_out": { "name": "PICASSO vermogen uit" },
       "max_upw_regulation_price": { "name": "Prijs - Max opwaartse regulatie" },
-      "min_downw_regulation_price": { "name": "Prijs - Min neerwaartse regulatie" }
+      "min_downw_regulation_price": { "name": "Prijs - Min neerwaartse regulatie" },
+      "regulation_state_previous_isp": {
+        "name": "Regeltoestand - Vorig kwartier",
+        "state": {
+          "down": "Afregelen (-1)",
+          "neutral": "Neutraal (0)",
+          "up": "Opregelen (1)",
+          "both": "Beide (2)"
+        }
+      },
+      "regulation_state_current_isp_prediction": {
+        "name": "Regeltoestand - Prognose huidig kwartier",
+        "state": {
+          "down": "Afregelen (-1)",
+          "neutral": "Neutraal (0)",
+          "up": "Opregelen (1)",
+          "both": "Beide (2)"
+        }
+      },
+      "api_last_success": { "name": "API - Laatste succesvolle update" },
+      "api_response_time": { "name": "API - Responstijd" },
+      "api_consecutive_failures": { "name": "API - Opeenvolgende fouten" }
     },
     "binary_sensor": {
       "emergency_power_activated": {

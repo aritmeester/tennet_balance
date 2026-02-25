@@ -17,6 +17,12 @@ This project is not affiliated with or endorsed by TenneT.
 
 - Fully asynchronous
 - One sensor per numeric data point plus a binary sensor for emergency power detection
+- Additional rule-state sensors for previous quarter-hour (final) and current quarter-hour prediction:
+  - enum states: `down`, `neutral`, `up`, `both`
+  - labels include numeric state mapping for recognition (`-1`, `0`, `1`, `2`)
+  - experimental: determination logic is currently under evaluation and may change
+- `power_mari_in` and `power_mari_out` are disabled by default (available to enable manually)
+- Optional diagnostic sensors are available (disabled by default): last successful API update, API response time, and consecutive API failures
 - HACS compatible
 - Config Flow based setup
 
@@ -61,6 +67,12 @@ All sensors include:
 - end time
 
 as extra attributes.
+
+The regulation state sensors apply dummy-energy filtering for aFRR:
+- upward direction (`in`) only counts when upward price is present
+- downward direction (`out`) only counts when downward price is present
+
+The current quarter-hour sensor is a prediction based on snapshots received so far.
 
 ## Update strategy
 
