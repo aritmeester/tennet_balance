@@ -58,7 +58,7 @@ body:
       required: true
 
   - type: textarea
-    id: description
+    id: problem_description
     attributes:
       label: Problem description
       description: What is going wrong?
@@ -107,7 +107,6 @@ body:
     attributes:
       label: Relevant logs
       description: Paste relevant log lines (without API keys or other secrets).
-      render: text
 
   - type: textarea
     id: extra
