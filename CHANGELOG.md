@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 2602.26.1b2
+
+Changes since 2602.26.1b1:
+
+### Changed
+
+- Removed `TenneT` from device `DeviceInfo.name` to avoid duplicate vendor naming.
+- Updated sensor and binary sensor naming so friendly names no longer include the device name prefix.
+- Updated Dutch regulation prediction label to: `Huidig kwartier (prognose)`.
+
 ## 2602.26.1b1
 
 Changes since 2602.25.1b1:

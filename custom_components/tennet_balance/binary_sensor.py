@@ -47,6 +47,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 environment_slug,
                 device_identifier,
                 use_legacy_unique_id,
+                "Noodvermogen",
             ),
         ],
         update_before_add=True,
@@ -55,7 +56,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
     _attr_entity_registry_enabled_default = True
-    _attr_has_entity_name = True
+    _attr_has_entity_name = False
     _attr_translation_key = "emergency_power_activated"
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
 
@@ -65,8 +66,10 @@ class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
         environment_slug: str,
         device_identifier: str,
         use_legacy_unique_id: bool,
+        name: str | None,
     ):
         super().__init__(coordinator)
+        self._attr_name = name
         self._device_identifier = device_identifier
         self._attr_unique_id = (
             "tennet_balance_emergency_power_activated"
@@ -128,6 +131,6 @@ class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
     def device_info(self):
         return DeviceInfo(
             identifiers={(DOMAIN, self._device_identifier)},
-            name="TenneT Balance Delta High Resolution",
+            name="Balance Delta High Resolution",
             manufacturer="TenneT",
         )

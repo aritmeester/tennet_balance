@@ -48,6 +48,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
             environment_slug,
             device_identifier,
             _entry_owns_legacy_sensor(k),
+            v.get("name", "").removeprefix("TenneT "),
         )
         for k, v in SENSOR_DESCRIPTIONS.items()
     ]
@@ -59,6 +60,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 device_identifier,
                 "regulation_state_previous_isp",
                 is_current_prediction=False,
+                name="Regeltoestand - Vorig kwartier",
             ),
             RegulationStateEnumSensor(
                 coordinator,
@@ -66,28 +68,32 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 device_identifier,
                 "regulation_state_current_isp_prediction",
                 is_current_prediction=True,
+                name="Regeltoestand - Huidig kwartier (prognose)",
             ),
             ApiLastSuccessSensor(
                 coordinator,
                 environment_slug,
                 device_identifier,
+                name="API - Laatste succesvolle update",
             ),
             ApiResponseTimeSensor(
                 coordinator,
                 environment_slug,
                 device_identifier,
+                name="API - Responstijd",
             ),
             ApiConsecutiveFailuresSensor(
                 coordinator,
                 environment_slug,
                 device_identifier,
+                name="API - Opeenvolgende fouten",
             ),
         ]
     )
     async_add_entities(sensors, update_before_add=True)
 
 class TennetPointSensor(CoordinatorEntity, SensorEntity):
-    _attr_has_entity_name = True
+    _attr_has_entity_name = False
 
     async def async_update(self):
         await self.coordinator.async_request_refresh()
@@ -100,9 +106,11 @@ class TennetPointSensor(CoordinatorEntity, SensorEntity):
         environment_slug: str,
         device_identifier: str,
         use_legacy_unique_id: bool,
+        name: str | None,
     ):
         super().__init__(coordinator)
         self.key = key
+        self._attr_name = name
         self._attr_translation_key = key
         self._device_identifier = device_identifier
         self._attr_unique_id = (
@@ -126,7 +134,7 @@ class TennetPointSensor(CoordinatorEntity, SensorEntity):
     def device_info(self):
         return DeviceInfo(
             identifiers={(DOMAIN, self._device_identifier)},
-            name="TenneT Balance Delta High Resolution",
+            name="Balance Delta High Resolution",
             manufacturer="TenneT"
         )
 
@@ -162,7 +170,7 @@ class TennetPointSensor(CoordinatorEntity, SensorEntity):
 
 
 class _BaseRegulationStateSensor(CoordinatorEntity, SensorEntity):
-    _attr_has_entity_name = True
+    _attr_has_entity_name = False
 
     def __init__(
         self,
@@ -171,8 +179,10 @@ class _BaseRegulationStateSensor(CoordinatorEntity, SensorEntity):
         device_identifier: str,
         translation_key: str,
         is_current_prediction: bool,
+        name: str | None,
     ):
         super().__init__(coordinator)
+        self._attr_name = name
         self._device_identifier = device_identifier
         self._attr_translation_key = translation_key
         self._attr_unique_id = f"tennet_balance_{environment_slug}_{translation_key}"
@@ -182,7 +192,7 @@ class _BaseRegulationStateSensor(CoordinatorEntity, SensorEntity):
     def device_info(self):
         return DeviceInfo(
             identifiers={(DOMAIN, self._device_identifier)},
-            name="TenneT Balance Delta High Resolution",
+            name="Balance Delta High Resolution",
             manufacturer="TenneT",
         )
 
@@ -225,12 +235,13 @@ class RegulationStateEnumSensor(_BaseRegulationStateSensor):
 
 
 class _BaseApiDiagnosticSensor(CoordinatorEntity, SensorEntity):
-    _attr_has_entity_name = True
+    _attr_has_entity_name = False
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
 
-    def __init__(self, coordinator, environment_slug: str, device_identifier: str, translation_key: str):
+    def __init__(self, coordinator, environment_slug: str, device_identifier: str, translation_key: str, name: str | None):
         super().__init__(coordinator)
+        self._attr_name = name
         self._device_identifier = device_identifier
         self._attr_translation_key = translation_key
         self._attr_unique_id = f"tennet_balance_{environment_slug}_{translation_key}"
@@ -239,7 +250,7 @@ class _BaseApiDiagnosticSensor(CoordinatorEntity, SensorEntity):
     def device_info(self):
         return DeviceInfo(
             identifiers={(DOMAIN, self._device_identifier)},
-            name="TenneT Balance Delta High Resolution",
+            name="Balance Delta High Resolution",
             manufacturer="TenneT",
         )
 
@@ -248,8 +259,8 @@ class ApiLastSuccessSensor(_BaseApiDiagnosticSensor):
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_icon = "mdi:clock-check-outline"
 
-    def __init__(self, coordinator, environment_slug: str, device_identifier: str):
-        super().__init__(coordinator, environment_slug, device_identifier, "api_last_success")
+    def __init__(self, coordinator, environment_slug: str, device_identifier: str, name: str | None):
+        super().__init__(coordinator, environment_slug, device_identifier, "api_last_success", name)
 
     @property
     def native_value(self):
@@ -260,8 +271,8 @@ class ApiResponseTimeSensor(_BaseApiDiagnosticSensor):
     _attr_native_unit_of_measurement = "ms"
     _attr_icon = "mdi:timer-outline"
 
-    def __init__(self, coordinator, environment_slug: str, device_identifier: str):
-        super().__init__(coordinator, environment_slug, device_identifier, "api_response_time")
+    def __init__(self, coordinator, environment_slug: str, device_identifier: str, name: str | None):
+        super().__init__(coordinator, environment_slug, device_identifier, "api_response_time", name)
 
     @property
     def native_value(self):
@@ -271,8 +282,8 @@ class ApiResponseTimeSensor(_BaseApiDiagnosticSensor):
 class ApiConsecutiveFailuresSensor(_BaseApiDiagnosticSensor):
     _attr_icon = "mdi:alert-circle-outline"
 
-    def __init__(self, coordinator, environment_slug: str, device_identifier: str):
-        super().__init__(coordinator, environment_slug, device_identifier, "api_consecutive_failures")
+    def __init__(self, coordinator, environment_slug: str, device_identifier: str, name: str | None):
+        super().__init__(coordinator, environment_slug, device_identifier, "api_consecutive_failures", name)
 
     @property
     def native_value(self):

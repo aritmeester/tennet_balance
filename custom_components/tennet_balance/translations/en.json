@@ -69,7 +69,7 @@
         }
       },
       "regulation_state_current_isp_prediction": {
-        "name": "Regulation State - Current Quarter-Hour Prediction",
+        "name": "Regulation State - Current Quarter-Hour (prediction)",
         "state": {
           "down": "Downward (-1)",
           "neutral": "Neutral (0)",

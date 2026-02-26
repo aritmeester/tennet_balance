@@ -69,7 +69,7 @@
         }
       },
       "regulation_state_current_isp_prediction": {
-        "name": "Regeltoestand - Prognose huidig kwartier",
+        "name": "Regeltoestand - Huidig kwartier (prognose)",
         "state": {
           "down": "Afregelen (-1)",
           "neutral": "Neutraal (0)",
