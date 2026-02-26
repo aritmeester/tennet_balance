@@ -1,6 +1,9 @@
 {
   "domain": "tennet_balance",
   "name": "TenneT Balance Delta High Resolution",
+  "after_dependencies": [
+    "http"
+  ],
   "codeowners": ["@aritmeester"],
   "config_flow": true,
   "documentation": "https://github.com/aritmeester/tennet_balance",
