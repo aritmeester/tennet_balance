@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2602.26.1b1
+
+Changes since 2602.25.1b1:
+
 ### Added
 
 - Added two enum sensors for regulation state:
