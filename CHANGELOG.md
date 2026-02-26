@@ -20,6 +20,7 @@
 
 - Removed the dedicated Regulation State 2 binary sensors and numeric regulation state sensors.
 - Set `power_mari_in` and `power_mari_out` sensors to disabled by default (they remain available for manual enable).
+- Price units now report as `€/MWh` instead of `€`.
 
 ### Fixed
 
