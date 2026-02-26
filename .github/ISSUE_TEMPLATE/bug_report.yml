@@ -1,0 +1,116 @@
+name: Bug report
+description: Report a problem with tennet_balance
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please include as much detail as possible so the issue can be reproduced quickly.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I am using the latest version of the integration.
+          required: true
+        - label: I have searched existing issues.
+          required: true
+
+  - type: input
+    id: integration_version
+    attributes:
+      label: Integration version
+      description: For example 2602.25.1b1
+      placeholder: "2602.25.1b1"
+    validations:
+      required: true
+
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.x.x"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Installation method
+      options:
+        - HACS
+        - Manual
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: TenneT environment
+      options:
+        - api (Production)
+        - api.acc (Acceptance)
+        - Unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem description
+      description: What is going wrong?
+      placeholder: Provide a short but clear description.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: dropdown
+    id: regulation_related
+    attributes:
+      label: Is this about regulation-state sensors?
+      description: This functionality is currently experimental.
+      options:
+        - Yes
+        - No
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste relevant log lines (without API keys or other secrets).
+      render: text
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Screenshots, entities, automations, or other context.
