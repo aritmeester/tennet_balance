@@ -13,6 +13,37 @@ BACKOFF_SECONDS = 0.5
 class TennetApiAuthError(Exception):
     """Raised when authentication with the TenneT API fails."""
 
+
+class TennetApiError(Exception):
+    """Raised when the TenneT API returns an error payload or status."""
+
+    def __init__(self, message: str, *, status: int | None = None, error_id: str | None = None, payload: dict | None = None):
+        super().__init__(message)
+        self.message = message
+        self.status = status
+        self.error_id = error_id
+        self.payload = payload or {}
+
+    @property
+    def details(self) -> dict:
+        return {
+            "type": self.__class__.__name__,
+            "status": self.status,
+            "error_id": self.error_id,
+            "message": self.message,
+            "payload": self.payload,
+        }
+
+
+class TennetApiNoDataError(TennetApiError):
+    """Raised when the API returns a no-data payload."""
+
+
+def _extract_payload_error(payload: dict) -> tuple[str | None, str | None]:
+    error_message = payload.get("Error_message") or payload.get("error")
+    error_id = payload.get("Error_id")
+    return error_message, error_id
+
 class TennetApiClient:
     def __init__(self, hass, api_key: str, environment: str):
         self._hass = hass
@@ -27,17 +58,41 @@ class TennetApiClient:
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
                 async with session.get(url, headers=headers, timeout=30) as resp:
-                    if resp.status in (401, 403):
-                        raise TennetApiAuthError("Invalid API key or unauthorized environment")
-                    if resp.status >= 400:
-                        LOGGER.warning(
-                            "TenneT API request failed with status %s (attempt %s/%s)",
-                            resp.status,
-                            attempt,
-                            MAX_ATTEMPTS,
+                    payload = await resp.json(content_type=None)
+                    if not isinstance(payload, dict):
+                        raise TennetApiError(
+                            f"Unexpected API response type: {type(payload).__name__}",
+                            status=resp.status,
                         )
-                    resp.raise_for_status()
-                    return await resp.json()
+
+                    error_message, error_id = _extract_payload_error(payload)
+
+                    if resp.status in (401, 403):
+                        raise TennetApiAuthError(error_message or "Invalid API key or unauthorized environment")
+
+                    if error_message == "No data found":
+                        raise TennetApiNoDataError(
+                            error_message,
+                            status=resp.status,
+                            error_id=error_id,
+                            payload=payload,
+                        )
+
+                    if error_message:
+                        raise TennetApiError(
+                            error_message,
+                            status=resp.status,
+                            error_id=error_id,
+                            payload=payload,
+                        )
+
+                    if resp.status >= 400:
+                        raise TennetApiError(
+                            f"HTTP {resp.status}",
+                            status=resp.status,
+                            payload=payload,
+                        )
+                    return payload
             except (asyncio.TimeoutError, OSError, aiohttp.ClientError) as err:
                 last_error = err
                 LOGGER.warning(

@@ -119,6 +119,10 @@ class TennetPointSensor(CoordinatorEntity, SensorEntity):
             self._attr_state_class = None
 
     @property
+    def available(self):
+        return super().available and self.coordinator.latest_point is not None
+
+    @property
     def device_info(self):
         return DeviceInfo(
             identifiers={(DOMAIN, self._device_identifier)},
@@ -184,7 +188,7 @@ class _BaseRegulationStateSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def available(self):
-        return self.coordinator.rule_state_2_analysis is not None
+        return super().available and self.coordinator.rule_state_2_analysis is not None
 
     @property
     def _regulation_state(self):
@@ -278,4 +282,5 @@ class ApiConsecutiveFailuresSensor(_BaseApiDiagnosticSensor):
     def extra_state_attributes(self):
         return {
             "last_error": self.coordinator.api_last_error,
+            "last_error_details": self.coordinator.api_last_error_details,
         }

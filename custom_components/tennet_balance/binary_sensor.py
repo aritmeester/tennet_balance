@@ -77,7 +77,7 @@ class EmergencyPowerActivatedSensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def available(self):
-        return self.coordinator.latest_point is not None
+        return super().available and self.coordinator.latest_point is not None
 
     @property
     def is_on(self):

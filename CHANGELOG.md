@@ -21,6 +21,12 @@
 - Removed the dedicated Regulation State 2 binary sensors and numeric regulation state sensors.
 - Set `power_mari_in` and `power_mari_out` sensors to disabled by default (they remain available for manual enable).
 
+### Fixed
+
+- API error payloads are now handled explicitly, including both `{"error":"No data found"}` and structured `Error_message` responses.
+- Failed API updates (including no-data responses) now make point-based sensors unavailable instead of silently exposing empty values.
+- Added structured API error context to diagnostics (`api_last_error_details`) for easier troubleshooting.
+
 ## 2623.23.1
 
 Changes since 2602.23.0:

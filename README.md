@@ -91,3 +91,13 @@ logger:
   default: info
   logs:
     custom_components.tennet_balance: debug
+
+## Troubleshooting
+
+- If the API returns `{"error":"No data found"}`, the integration treats this as an API error for that update.
+- If the API returns a structured error payload (for example with `Error_message`), the update is also marked as failed.
+- During failed updates, point-based sensors become unavailable until valid data is received again.
+- Diagnostic sensor `API - Consecutive Failures` exposes:
+  - `last_error`
+  - `last_error_details` (including error type/message and payload details when available)
+- Full integration diagnostics are available via **Settings → Devices & Services → TenneT Balance Delta → Download diagnostics**.

@@ -7,7 +7,7 @@ import homeassistant.util.dt as dt_util
 import asyncio
 
 from .const import REGULATION_PRICE_KEYS
-from .api import TennetApiAuthError
+from .api import TennetApiAuthError, TennetApiError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -63,6 +63,7 @@ class TennetCoordinator(DataUpdateCoordinator):
         self._api_response_time_ms = None
         self._api_consecutive_failures = 0
         self._api_last_error = None
+        self._api_last_error_details = None
 
     def _extract_latest_point(self, data):
         try:
@@ -206,6 +207,10 @@ class TennetCoordinator(DataUpdateCoordinator):
         return self._api_last_error
 
     @property
+    def api_last_error_details(self):
+        return self._api_last_error_details
+
+    @property
     def regulation_state_previous_isp(self):
         analysis = self._rule_state_2_window_analysis()
         if analysis is None:
@@ -248,10 +253,23 @@ class TennetCoordinator(DataUpdateCoordinator):
             except TennetApiAuthError as err:
                 self._api_consecutive_failures += 1
                 self._api_last_error = str(err)
+                self._api_last_error_details = {
+                    "type": "TennetApiAuthError",
+                    "message": str(err),
+                }
                 raise ConfigEntryAuthFailed("Invalid API key") from err
+            except TennetApiError as err:
+                self._api_consecutive_failures += 1
+                self._api_last_error = str(err)
+                self._api_last_error_details = err.details
+                raise UpdateFailed(f"TenneT API error: {err}") from err
             except Exception as err:
                 self._api_consecutive_failures += 1
                 self._api_last_error = str(err)
+                self._api_last_error_details = {
+                    "type": type(err).__name__,
+                    "message": str(err),
+                }
                 raise UpdateFailed(f"Error fetching TenneT data: {err}") from err
             now = dt_util.utcnow()
             self._last_request = now
@@ -259,6 +277,7 @@ class TennetCoordinator(DataUpdateCoordinator):
             self._api_response_time_ms = int((now - request_start).total_seconds() * 1000)
             self._api_consecutive_failures = 0
             self._api_last_error = None
+            self._api_last_error_details = None
             if self._keep_last_regulation_prices:
                 point = self._extract_latest_point(data)
                 if point:
