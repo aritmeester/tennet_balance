@@ -12,6 +12,10 @@ TO_REDACT = {CONF_API_KEY}
 
 async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> dict:
     coordinator = hass.data[DOMAIN][entry.entry_id]
+    api_last_response = coordinator.data
+
+    if isinstance(api_last_response, (dict, list)):
+        api_last_response = async_redact_data(api_last_response, TO_REDACT)
 
     return {
         "entry": async_redact_data(dict(entry.data), TO_REDACT),
@@ -23,5 +27,6 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
             "api_consecutive_failures": coordinator.api_consecutive_failures,
             "api_last_error": coordinator.api_last_error,
             "api_last_error_details": coordinator.api_last_error_details,
+            "api_last_response": api_last_response,
         },
     }

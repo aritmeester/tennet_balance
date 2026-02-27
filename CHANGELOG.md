@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Added `api_last_response` to Download Diagnostics so the latest API payload is included for troubleshooting.
+
 ### Changed
 
 - Regulation state for previous quarter-hour now transitions exactly on quarter boundaries (`:00`, `:15`, `:30`, `:45`) instead of on the next periodic API refresh.
