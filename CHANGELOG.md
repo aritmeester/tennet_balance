@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Regulation state for previous quarter-hour now transitions exactly on quarter boundaries (`:00`, `:15`, `:30`, `:45`) instead of on the next periodic API refresh.
+
 ## 2602.26.1b2
 
 Changes since 2602.26.1b1:

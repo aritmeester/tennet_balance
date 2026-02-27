@@ -3,6 +3,8 @@ import logging
 from zoneinfo import ZoneInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.core import callback
+from homeassistant.helpers.event import async_track_point_in_utc_time
 import homeassistant.util.dt as dt_util
 import asyncio
 
@@ -64,6 +66,33 @@ class TennetCoordinator(DataUpdateCoordinator):
         self._api_consecutive_failures = 0
         self._api_last_error = None
         self._api_last_error_details = None
+        self._unsub_isp_tick = None
+        self._schedule_next_isp_tick()
+
+    def _next_isp_boundary_utc(self):
+        now_local = _as_local_datetime(dt_util.utcnow())
+        current_isp_start = _isp_start_for(now_local)
+        next_isp_start_local = current_isp_start + timedelta(minutes=ISP_MINUTES)
+        return next_isp_start_local.astimezone(dt_util.UTC)
+
+    def _schedule_next_isp_tick(self):
+        if self._unsub_isp_tick is not None:
+            self._unsub_isp_tick()
+        self._unsub_isp_tick = async_track_point_in_utc_time(
+            self.hass,
+            self._handle_isp_tick,
+            self._next_isp_boundary_utc(),
+        )
+
+    @callback
+    def _handle_isp_tick(self, _now):
+        self.async_update_listeners()
+        self._schedule_next_isp_tick()
+
+    async def async_shutdown(self):
+        if self._unsub_isp_tick is not None:
+            self._unsub_isp_tick()
+            self._unsub_isp_tick = None
 
     def _extract_latest_point(self, data):
         try:
@@ -146,17 +175,13 @@ class TennetCoordinator(DataUpdateCoordinator):
         return grouped
 
     def _rule_state_2_window_analysis(self):
-        latest = self.latest_point
-        if not latest:
-            return None
-
-        latest_ts = self._point_timestamp(latest)
-        if latest_ts is None:
-            return None
-
         all_points = self._extract_all_points(self.data)
+        if not all_points:
+            return None
+
         grouped = self._group_points_by_isp(all_points)
-        current_isp_start = _isp_start_for(latest_ts)
+        now_local = _as_local_datetime(dt_util.utcnow())
+        current_isp_start = _isp_start_for(now_local)
         previous_isp_start = current_isp_start - timedelta(minutes=ISP_MINUTES)
 
         current_points = grouped.get(current_isp_start, [])
