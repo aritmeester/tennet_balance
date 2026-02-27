@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2602.27.1b1
+
+Changes since 2602.26.1b2:
+
 ### Added
 
 - Added `api_last_response` to Download Diagnostics so the latest API payload is included for troubleshooting.
