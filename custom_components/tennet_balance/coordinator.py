@@ -3,8 +3,6 @@ import logging
 from zoneinfo import ZoneInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.core import callback
-from homeassistant.helpers.event import async_track_point_in_utc_time
 import homeassistant.util.dt as dt_util
 import asyncio
 
@@ -66,33 +64,9 @@ class TennetCoordinator(DataUpdateCoordinator):
         self._api_consecutive_failures = 0
         self._api_last_error = None
         self._api_last_error_details = None
-        self._unsub_isp_tick = None
-        self._schedule_next_isp_tick()
-
-    def _next_isp_boundary_utc(self):
-        now_local = _as_local_datetime(dt_util.utcnow())
-        current_isp_start = _isp_start_for(now_local)
-        next_isp_start_local = current_isp_start + timedelta(minutes=ISP_MINUTES)
-        return next_isp_start_local.astimezone(dt_util.UTC)
-
-    def _schedule_next_isp_tick(self):
-        if self._unsub_isp_tick is not None:
-            self._unsub_isp_tick()
-        self._unsub_isp_tick = async_track_point_in_utc_time(
-            self.hass,
-            self._handle_isp_tick,
-            self._next_isp_boundary_utc(),
-        )
-
-    @callback
-    def _handle_isp_tick(self, _now):
-        self.async_update_listeners()
-        self._schedule_next_isp_tick()
 
     async def async_shutdown(self):
-        if self._unsub_isp_tick is not None:
-            self._unsub_isp_tick()
-            self._unsub_isp_tick = None
+        return None
 
     def _extract_latest_point(self, data):
         try:
@@ -114,15 +88,23 @@ class TennetCoordinator(DataUpdateCoordinator):
                     points.extend(period_points)
         return points
 
-    def _point_timestamp(self, point):
-        for key in ("timeInterval_end", "timeInterval_start"):
-            value = point.get(key)
-            if not value:
-                continue
-            parsed = dt_util.parse_datetime(value)
-            if parsed is not None:
-                return _as_local_datetime(parsed)
-        return None
+    def _point_interval(self, point):
+        start = None
+        end = None
+
+        raw_start = point.get("timeInterval_start")
+        if raw_start:
+            parsed_start = dt_util.parse_datetime(raw_start)
+            if parsed_start is not None:
+                start = _as_local_datetime(parsed_start)
+
+        raw_end = point.get("timeInterval_end")
+        if raw_end:
+            parsed_end = dt_util.parse_datetime(raw_end)
+            if parsed_end is not None:
+                end = _as_local_datetime(parsed_end)
+
+        return start, end
 
     def _direction_activations_for_point(self, point):
         upward_power = _parse_float(point.get("power_afrr_in")) + _parse_float(point.get("power_mfrrda_in"))
@@ -162,11 +144,19 @@ class TennetCoordinator(DataUpdateCoordinator):
     def _group_points_by_isp(self, points):
         grouped = {}
         for point in points:
-            timestamp = self._point_timestamp(point)
-            if timestamp is None:
+            start, end = self._point_interval(point)
+            if start is None and end is None:
                 continue
-            isp_start = _isp_start_for(timestamp)
-            grouped.setdefault(isp_start, []).append((timestamp, point))
+
+            if start is not None:
+                reference = start
+            elif end is not None:
+                reference = end - timedelta(seconds=1)
+            else:
+                continue
+            isp_start = _isp_start_for(reference)
+            sort_ts = end if end is not None else start
+            grouped.setdefault(isp_start, []).append((sort_ts, point))
 
         for isp_start in grouped:
             grouped[isp_start].sort(key=lambda item: item[0])
@@ -180,8 +170,23 @@ class TennetCoordinator(DataUpdateCoordinator):
             return None
 
         grouped = self._group_points_by_isp(all_points)
-        now_local = _as_local_datetime(dt_util.utcnow())
-        current_isp_start = _isp_start_for(now_local)
+
+        latest_point = None
+        latest_end = None
+        for point in all_points:
+            _start, end = self._point_interval(point)
+            if end is None:
+                continue
+            if latest_end is None or end > latest_end:
+                latest_end = end
+                latest_point = point
+
+        if latest_end is None or latest_point is None:
+            return None
+
+        latest_start, _latest_end = self._point_interval(latest_point)
+        reference = latest_start if latest_start is not None else (latest_end - timedelta(seconds=1))
+        current_isp_start = _isp_start_for(reference)
         previous_isp_start = current_isp_start - timedelta(minutes=ISP_MINUTES)
 
         current_points = grouped.get(current_isp_start, [])
@@ -195,6 +200,7 @@ class TennetCoordinator(DataUpdateCoordinator):
             "current_isp_prediction": current_analysis,
             "previous_isp_start": previous_isp_start.isoformat(),
             "previous_isp": previous_analysis,
+            "latest_interval_end": latest_end.isoformat(),
         }
 
     @property
@@ -234,6 +240,20 @@ class TennetCoordinator(DataUpdateCoordinator):
     @property
     def api_last_error_details(self):
         return self._api_last_error_details
+
+    @property
+    def api_data_delay_seconds(self):
+        analysis = self._rule_state_2_window_analysis()
+        if analysis is None:
+            return None
+
+        latest_interval_end = dt_util.parse_datetime(analysis["latest_interval_end"])
+        if latest_interval_end is None:
+            return None
+
+        now_local = _as_local_datetime(dt_util.utcnow())
+        delay_seconds = int((now_local - _as_local_datetime(latest_interval_end)).total_seconds())
+        return max(delay_seconds, 0)
 
     @property
     def regulation_state_previous_isp(self):

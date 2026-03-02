@@ -79,6 +79,7 @@
       },
       "api_last_success": { "name": "API - Last Successful Update" },
       "api_response_time": { "name": "API - Response Time" },
+      "api_data_delay": { "name": "API - Data Delay" },
       "api_consecutive_failures": { "name": "API - Consecutive Failures" }
     },
     "binary_sensor": {

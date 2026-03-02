@@ -24,6 +24,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
             "last_update_success": coordinator.last_update_success,
             "api_last_success": coordinator.api_last_success,
             "api_response_time_ms": coordinator.api_response_time_ms,
+            "api_data_delay_seconds": coordinator.api_data_delay_seconds,
             "api_consecutive_failures": coordinator.api_consecutive_failures,
             "api_last_error": coordinator.api_last_error,
             "api_last_error_details": coordinator.api_last_error_details,

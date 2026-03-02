@@ -79,6 +79,7 @@
       },
       "api_last_success": { "name": "API - Laatste succesvolle update" },
       "api_response_time": { "name": "API - Responstijd" },
+      "api_data_delay": { "name": "API - Datavertraging" },
       "api_consecutive_failures": { "name": "API - Opeenvolgende fouten" }
     },
     "binary_sensor": {

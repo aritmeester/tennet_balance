@@ -82,6 +82,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 device_identifier,
                 name="API - Responstijd",
             ),
+            ApiDataDelaySensor(
+                coordinator,
+                environment_slug,
+                device_identifier,
+                name="API - Datavertraging",
+            ),
             ApiConsecutiveFailuresSensor(
                 coordinator,
                 environment_slug,
@@ -212,6 +218,7 @@ class _BaseRegulationStateSensor(CoordinatorEntity, SensorEntity):
         return {
             "current_isp_start": analysis.get("current_isp_start"),
             "previous_isp_start": analysis.get("previous_isp_start"),
+            "latest_interval_end": analysis.get("latest_interval_end"),
         }
 
 
@@ -277,6 +284,18 @@ class ApiResponseTimeSensor(_BaseApiDiagnosticSensor):
     @property
     def native_value(self):
         return self.coordinator.api_response_time_ms
+
+
+class ApiDataDelaySensor(_BaseApiDiagnosticSensor):
+    _attr_native_unit_of_measurement = "s"
+    _attr_icon = "mdi:clock-alert-outline"
+
+    def __init__(self, coordinator, environment_slug: str, device_identifier: str, name: str | None):
+        super().__init__(coordinator, environment_slug, device_identifier, "api_data_delay", name)
+
+    @property
+    def native_value(self):
+        return self.coordinator.api_data_delay_seconds
 
 
 class ApiConsecutiveFailuresSensor(_BaseApiDiagnosticSensor):

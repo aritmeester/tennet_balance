@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- Added diagnostic sensor `API - Data Delay` (seconds) to show the current delay between now and the latest `timeInterval_end` from the API feed.
+
+### Changed
+
+- Regulation state for current and previous quarter-hour is now based on the latest available interval data (`timeInterval_start`/`timeInterval_end`) to handle API publication delay correctly.
+
 ## 2602.27.1b1
 
 Changes since 2602.26.1b2:
