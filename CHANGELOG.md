@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2603.2.1b1
+
+Changes since 2602.27.1b1:
+
 ### Added
 
 - Added diagnostic sensor `API - Data Delay` (seconds) to show the current delay between now and the latest `timeInterval_end` from the API feed.
