@@ -86,11 +86,41 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 Enable debug logging:
 
+### Via the UI (temporary, no restart)
+
+You can enable debug logging at runtime from the Home Assistant UI:
+
+1. Go to **Developer Tools → Services**.
+2. Select the service: `logger.set_level`.
+3. Use this service data:
+
+```yaml
+custom_components.tennet_balance: debug
+```
+
+To disable again:
+
+```yaml
+custom_components.tennet_balance: info
+```
+
+Note: this method resets after a Home Assistant restart.
+
+### Via the integration menu (if available)
+
+In some Home Assistant versions you may see **Enable debug logging** / **Disable debug logging** in the integration's three-dot menu.
+If you don't see it, use the `logger.set_level` service above.
+
+This option may be missing depending on your Home Assistant version and whether the integration exposes its logger names in its manifest.
+
+### Via configuration.yaml (persistent)
+
 ```yaml
 logger:
   default: info
   logs:
     custom_components.tennet_balance: debug
+```
 
 ## Troubleshooting
 
