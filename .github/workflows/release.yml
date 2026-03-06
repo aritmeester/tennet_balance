@@ -28,19 +28,13 @@ jobs:
           VERSION="${{ inputs.version }}"
 
           MANIFEST_VERSION=$(python -c "import json; print(json.load(open('custom_components/tennet_balance/manifest.json'))['version'])")
-          HACS_VERSION=$(python -c "import json; print(json.load(open('hacs.json'))['version'])")
 
           if [ "$MANIFEST_VERSION" != "$VERSION" ]; then
             echo "manifest.json version ($MANIFEST_VERSION) does not match input ($VERSION)"
             exit 1
           fi
 
-          if [ "$HACS_VERSION" != "$VERSION" ]; then
-            echo "hacs.json version ($HACS_VERSION) does not match input ($VERSION)"
-            exit 1
-          fi
-
-      - name: Extract release notes from README changelog
+      - name: Extract release notes from CHANGELOG.md
         shell: bash
         run: |
           set -euo pipefail
@@ -50,20 +44,21 @@ jobs:
           from pathlib import Path
 
           version = "${{ inputs.version }}"
-          readme = Path("README.md").read_text(encoding="utf-8").splitlines()
+          changelog = Path("CHANGELOG.md").read_text(encoding="utf-8").splitlines()
 
+          header = f"## {version}"
           start = None
-          for idx, line in enumerate(readme):
-              if line.strip() == f"### {version}":
+          for idx, line in enumerate(changelog):
+              if line.strip() == header:
                   start = idx + 1
                   break
 
           if start is None:
-              raise SystemExit(f"Could not find changelog section '### {version}' in README.md")
+              raise SystemExit(f"Could not find changelog section '{header}' in CHANGELOG.md")
 
           notes = []
-          for line in readme[start:]:
-              if line.startswith("### "):
+          for line in changelog[start:]:
+              if line.startswith("## "):
                   break
               notes.append(line)
 
@@ -84,14 +79,15 @@ jobs:
           set -euo pipefail
           TAG="v${{ inputs.version }}"
 
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists locally"
-            exit 1
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists on origin; skipping tag creation"
+            exit 0
           fi
 
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists on origin"
-            exit 1
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists locally; pushing it"
+            git push origin "$TAG"
+            exit 0
           fi
 
           git tag "$TAG"
