@@ -46,7 +46,9 @@ Wacht totdat de GitHub Actions workflow **Home Assistant Validate** geslaagd is.
 - Tag: `v<versie>` (bijv. `v2602.25.1b1`)
 - Prerelease: **aan** voor beta (`b1`, `b2`, ...)
 - Prerelease: **uit** voor definitieve release
-- Release notes: neem de relevante tekst uit `CHANGELOG.md` (`Unreleased`)
+- Release notes: neem de relevante tekst uit `CHANGELOG.md` (de sectie van de versie die je releaset)
+
+Tip: Na een release hoort `Unreleased` weer leeg te zijn (of alleen placeholders te bevatten).
 
 ### 5) Controle achteraf
 
@@ -60,8 +62,8 @@ Controleer:
 ## Praktisch voorbeeld
 
 - Prerelease:
-  - manifest: `2602.25.1b1`
-  - release: `v2602.25.1b1` (prerelease)
+  - manifest: `2603.6.1b1`
+  - release: `v2603.6.1b1` (prerelease)
 - Final:
-  - manifest: `2602.25.1`
-  - release: `v2602.25.1` (normale release)
+  - manifest: `2603.6.1`
+  - release: `v2603.6.1` (normale release)

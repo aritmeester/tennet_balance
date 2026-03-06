@@ -2,60 +2,31 @@
 
 ## Unreleased
 
-## 2603.2.1b1
+## 2603.6.1
 
-Changes since 2602.27.1b1:
-
-### Added
-
-- Added diagnostic sensor `API - Data Delay` (seconds) to show the current delay between now and the latest `timeInterval_end` from the API feed.
-
-### Changed
-
-- Regulation state for current and previous quarter-hour is now based on the latest available interval data (`timeInterval_start`/`timeInterval_end`) to handle API publication delay correctly.
-
-## 2602.27.1b1
-
-Changes since 2602.26.1b2:
+Changes since 2602.23.1:
 
 ### Added
 
-- Added `api_last_response` to Download Diagnostics so the latest API payload is included for troubleshooting.
-
-### Changed
-
-- Regulation state for previous quarter-hour now transitions exactly on quarter boundaries (`:00`, `:15`, `:30`, `:45`) instead of on the next periodic API refresh.
-
-## 2602.26.1b2
-
-Changes since 2602.26.1b1:
-
-### Changed
-
-- Removed `TenneT` from device `DeviceInfo.name` to avoid duplicate vendor naming.
-- Updated sensor and binary sensor naming so friendly names no longer include the device name prefix.
-- Updated Dutch regulation prediction label to: `Huidig kwartier (prognose)`.
-
-## 2602.26.1b1
-
-Changes since 2602.25.1b1:
-
-### Added
-
-- Added two enum sensors for regulation state:
+- Added regulation state enum sensors for:
 	- previous quarter-hour (final)
 	- current quarter-hour prediction
 - Enum sensor values are now `down`, `neutral`, `up`, `both`.
 - Enum labels include the numeric mapping for recognition (`-1`, `0`, `1`, `2`).
-- Added dummy-energy aware filtering for aFRR activations in Regulation State 2 logic:
+- Added dummy-energy aware filtering for aFRR activations in regulation state logic:
 	- `power_afrr_in` only counts when `max_upw_regulation_price` is present
 	- `power_afrr_out` only counts when `min_downw_regulation_price` is present
 - Added dynamic icons for enum regulation state values.
-- Marked regulation state determination as experimental/in evaluation; logic and outcomes may change.
-- Added optional diagnostic sensors (disabled by default): API last successful update, API response time, and API consecutive failures.
+- Added optional diagnostic sensors (disabled by default): API last successful update, API response time, API consecutive failures, and `API - Data Delay` (seconds).
+- Added `api_last_response` to Download Diagnostics so the latest API payload is included for troubleshooting.
 
 ### Changed
 
+- Regulation state for current and previous quarter-hour is now based on the latest available interval data (`timeInterval_start`/`timeInterval_end`) to handle API publication delay correctly.
+- Regulation state determination remains experimental/in evaluation; logic and outcomes may change.
+- Removed `TenneT` from device `DeviceInfo.name` to avoid duplicate vendor naming.
+- Updated sensor and binary sensor naming so friendly names no longer include the device name prefix.
+- Updated Dutch regulation prediction label to: `Huidig kwartier (prognose)`.
 - Removed the dedicated Regulation State 2 binary sensors and numeric regulation state sensors.
 - Set `power_mari_in` and `power_mari_out` sensors to disabled by default (they remain available for manual enable).
 - Price units now report as `€/MWh` instead of `€`.
@@ -66,7 +37,7 @@ Changes since 2602.25.1b1:
 - Failed API updates (including no-data responses) now make point-based sensors unavailable instead of silently exposing empty values.
 - Added structured API error context to diagnostics (`api_last_error_details`) for easier troubleshooting.
 
-## 2623.23.1
+## 2602.23.1
 
 Changes since 2602.23.0:
 
