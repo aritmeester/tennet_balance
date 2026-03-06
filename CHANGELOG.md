@@ -9,13 +9,15 @@ Changes since 2602.23.1:
 ### Added
 
 - Added regulation state enum sensors for:
-	- previous quarter-hour (final)
-	- current quarter-hour prediction
+
+  - previous quarter-hour (final)
+  - current quarter-hour prediction
 - Enum sensor values are now `down`, `neutral`, `up`, `both`.
 - Enum labels include the numeric mapping for recognition (`-1`, `0`, `1`, `2`).
 - Added dummy-energy aware filtering for aFRR activations in regulation state logic:
-	- `power_afrr_in` only counts when `max_upw_regulation_price` is present
-	- `power_afrr_out` only counts when `min_downw_regulation_price` is present
+
+  - `power_afrr_in` only counts when `max_upw_regulation_price` is present
+  - `power_afrr_out` only counts when `min_downw_regulation_price` is present
 - Added dynamic icons for enum regulation state values.
 - Added optional diagnostic sensors (disabled by default): API last successful update, API response time, API consecutive failures, and `API - Data Delay` (seconds).
 - Added `api_last_response` to Download Diagnostics so the latest API payload is included for troubleshooting.
