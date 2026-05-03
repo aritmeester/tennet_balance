@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import logging
 
 import aiohttp
@@ -8,6 +9,10 @@ LOGGER = logging.getLogger(__name__)
 
 MAX_ATTEMPTS = 3
 BACKOFF_SECONDS = 0.5
+
+
+def _fmt_date(d: datetime.date) -> str:
+    return d.strftime("%d-%m-%Y 00:00:00")
 
 
 class TennetApiAuthError(Exception):
@@ -44,20 +49,20 @@ def _extract_payload_error(payload: dict) -> tuple[str | None, str | None]:
     error_id = payload.get("Error_id")
     return error_message, error_id
 
+
 class TennetApiClient:
     def __init__(self, hass, api_key: str, environment: str):
         self._hass = hass
         self._api_key = api_key
         self._base_url = f"https://{environment}.tennet.eu"
 
-    async def get_latest(self) -> dict:
-        url = f"{self._base_url}/publications/v1/balance-delta-high-res/latest"
+    async def _get(self, url: str, params: dict | None = None) -> dict:
         headers = {"Accept": "application/json", "apikey": self._api_key}
         session = async_get_clientsession(self._hass)
         last_error = None
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
-                async with session.get(url, headers=headers, timeout=30) as resp:
+                async with session.get(url, headers=headers, params=params, timeout=30) as resp:
                     payload = await resp.json(content_type=None)
                     if not isinstance(payload, dict):
                         raise TennetApiError(
@@ -106,3 +111,15 @@ class TennetApiClient:
         if last_error is not None:
             raise last_error
         raise RuntimeError("Unknown error while requesting TenneT API")
+
+    async def get_latest(self) -> dict:
+        url = f"{self._base_url}/publications/v1/balance-delta-high-res/latest"
+        return await self._get(url)
+
+    async def get_settlement_prices(self, date_from: str, date_to: str) -> dict:
+        url = f"{self._base_url}/publications/v1/settlement-prices"
+        return await self._get(url, params={"date_from": date_from, "date_to": date_to})
+
+    async def get_reconciliation_prices_isp(self, date_from: str, date_to: str) -> dict:
+        url = f"{self._base_url}/publications/v1/reconciliation-prices/isp"
+        return await self._get(url, params={"date_from": date_from, "date_to": date_to})

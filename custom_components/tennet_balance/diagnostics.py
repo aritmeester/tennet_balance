@@ -11,9 +11,12 @@ TO_REDACT = {CONF_API_KEY}
 
 
 async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> dict:
-    coordinator = hass.data[DOMAIN][entry.entry_id]
-    api_last_response = coordinator.data
+    entry_data = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry_data["main"]
+    settlement = entry_data["settlement"]
+    reconciliation = entry_data["reconciliation"]
 
+    api_last_response = coordinator.data
     if isinstance(api_last_response, (dict, list)):
         api_last_response = async_redact_data(api_last_response, TO_REDACT)
 
@@ -29,5 +32,18 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
             "api_last_error": coordinator.api_last_error,
             "api_last_error_details": coordinator.api_last_error_details,
             "api_last_response": api_last_response,
+        },
+        "settlement_coordinator": {
+            "last_update_success": settlement.last_update_success,
+            "current_ptu": settlement.current_ptu,
+            "ptu_count": len(settlement.ptu_list),
+            "last_exception": str(settlement.last_exception) if settlement.last_exception else None,
+        },
+        "reconciliation_coordinator": {
+            "last_update_success": reconciliation.last_update_success,
+            "latest_isp_price": reconciliation.latest_isp_price,
+            "latest_date": reconciliation.latest_date,
+            "ptu_count": len(reconciliation.ptu_list),
+            "last_exception": str(reconciliation.last_exception) if reconciliation.last_exception else None,
         },
     }

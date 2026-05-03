@@ -35,3 +35,14 @@ SENSOR_DESCRIPTIONS = {
     key: {"name": f"TenneT {meta['name']}", **SENSOR_META_OVERRIDES[key]}
     for key, meta in GENERATED_SENSOR_DESCRIPTIONS.items()
 }
+
+SETTLEMENT_SENSOR_DESCRIPTIONS = {
+    "settlement_surplus": {"name": "Settlement Surplus Price", "field": "surplus", "unit": PRICE_UNIT_EUR_PER_MWH, "device_class": SensorDeviceClass.MONETARY},
+    "settlement_shortage": {"name": "Settlement Shortage Price", "field": "shortage", "unit": PRICE_UNIT_EUR_PER_MWH, "device_class": SensorDeviceClass.MONETARY},
+    "settlement_dispatch_up": {"name": "Settlement Dispatch Up Price", "field": "dispatch_up", "unit": PRICE_UNIT_EUR_PER_MWH, "device_class": SensorDeviceClass.MONETARY},
+    "settlement_dispatch_down": {"name": "Settlement Dispatch Down Price", "field": "dispatch_down", "unit": PRICE_UNIT_EUR_PER_MWH, "device_class": SensorDeviceClass.MONETARY},
+}
+
+RECONCILIATION_SENSOR_DESCRIPTIONS = {
+    "reconciliation_isp_price": {"name": "Reconciliation ISP Price", "field": "isp_price", "unit": PRICE_UNIT_EUR_PER_MWH, "device_class": SensorDeviceClass.MONETARY},
+}

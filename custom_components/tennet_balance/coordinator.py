@@ -1,3 +1,4 @@
+import datetime
 from datetime import timedelta
 import logging
 from zoneinfo import ZoneInfo
@@ -7,7 +8,7 @@ import homeassistant.util.dt as dt_util
 import asyncio
 
 from .const import REGULATION_PRICE_KEYS
-from .api import TennetApiAuthError, TennetApiError
+from .api import TennetApiAuthError, TennetApiError, TennetApiNoDataError, _fmt_date
 
 LOGGER = logging.getLogger(__name__)
 
@@ -335,3 +336,148 @@ class TennetCoordinator(DataUpdateCoordinator):
                         except (TypeError, ValueError):
                             continue
             return data
+
+
+class TennetSettlementCoordinator(DataUpdateCoordinator):
+    def __init__(self, hass, api):
+        super().__init__(hass, LOGGER, name="TenneT Settlement Prices", update_interval=timedelta(minutes=90))
+        self.api = api
+        self.ptu_list: list[dict] = []
+        self.current_ptu: dict | None = None
+
+    async def _async_update_data(self):
+        today = datetime.date.today()
+        date_from = _fmt_date(today - datetime.timedelta(days=1))
+        date_to = _fmt_date(today + datetime.timedelta(days=1))
+        try:
+            data = await self.api.get_settlement_prices(date_from, date_to)
+        except TennetApiAuthError as err:
+            raise ConfigEntryAuthFailed("Invalid API key") from err
+        except TennetApiNoDataError:
+            LOGGER.debug("TenneT settlement prices: no data available yet")
+            self.ptu_list = []
+            self.current_ptu = None
+            return {}
+        except TennetApiError as err:
+            raise UpdateFailed(f"TenneT Settlement API error: {err}") from err
+
+        try:
+            points_raw = data["Response"]["TimeSeries"][0]["Period"]["Points"]
+        except (KeyError, IndexError, TypeError) as err:
+            raise UpdateFailed(f"Unexpected settlement prices response structure: {err}") from err
+
+        ptu_list = []
+        for p in points_raw:
+            ptu_list.append({
+                "isp": p.get("isp"),
+                "surplus": _parse_float(p.get("surplus")),
+                "shortage": _parse_float(p.get("shortage")),
+                "dispatch_up": _parse_float(p.get("dispatch_up")),
+                "dispatch_down": _parse_float(p.get("dispatch_down")),
+                "regulation_state": p.get("regulation_state"),
+                "timeInterval_start": p.get("timeInterval_start"),
+                "timeInterval_end": p.get("timeInterval_end"),
+                "regulating_condition": p.get("regulating_condition"),
+            })
+        ptu_list.sort(key=lambda x: x.get("isp") or 0)
+        self.ptu_list = ptu_list
+
+        now = _as_local_datetime(dt_util.utcnow())
+        self.current_ptu = None
+        latest_ptu = None
+        latest_end = None
+        for ptu in ptu_list:
+            start_str = ptu.get("timeInterval_start")
+            end_str = ptu.get("timeInterval_end")
+            if not start_str or not end_str:
+                continue
+            start = dt_util.parse_datetime(start_str)
+            end = dt_util.parse_datetime(end_str)
+            if start is None or end is None:
+                continue
+            # Settlement timestamps are naive Amsterdam local time, not UTC
+            if start.tzinfo is None:
+                start = start.replace(tzinfo=MARKET_TIMEZONE)
+            if end.tzinfo is None:
+                end = end.replace(tzinfo=MARKET_TIMEZONE)
+            if start <= now < end:
+                self.current_ptu = ptu
+                break
+            if end <= now and (latest_end is None or end > latest_end):
+                latest_end = end
+                latest_ptu = ptu
+        if self.current_ptu is None:
+            self.current_ptu = latest_ptu
+
+        return data
+
+
+class TennetReconciliationCoordinator(DataUpdateCoordinator):
+    def __init__(self, hass, api):
+        super().__init__(hass, LOGGER, name="TenneT Reconciliation Prices", update_interval=timedelta(hours=1))
+        self.api = api
+        self.ptu_list: list[dict] = []
+        self.latest_date: str | None = None
+        self.latest_isp_price: float | None = None
+
+    def _extract_points(self, data: dict) -> list:
+        try:
+            return data["Response"]["TimeSeries"][0]["Period"][0]["Points"]
+        except (KeyError, IndexError, TypeError):
+            return []
+
+    async def _async_update_data(self):
+        today = datetime.date.today()
+        # Reconciliation lags ~33 days; API max range is 1 month — try two windows
+        windows = [
+            (today - datetime.timedelta(days=30), today),
+            (today - datetime.timedelta(days=60), today - datetime.timedelta(days=30)),
+        ]
+        points_raw = []
+        for date_from, date_to in windows:
+            try:
+                data = await self.api.get_reconciliation_prices_isp(_fmt_date(date_from), _fmt_date(date_to))
+                points_raw = self._extract_points(data)
+                if points_raw:
+                    break
+            except TennetApiAuthError as err:
+                raise ConfigEntryAuthFailed("Invalid API key") from err
+            except TennetApiNoDataError:
+                continue
+            except TennetApiError as err:
+                raise UpdateFailed(f"TenneT Reconciliation API error: {err}") from err
+
+        if not points_raw:
+            LOGGER.debug("TenneT reconciliation prices: no data in either window")
+            self.ptu_list = []
+            self.latest_isp_price = None
+            self.latest_date = None
+            return {}
+
+        ptu_list = []
+        for p in points_raw:
+            ptu_list.append({
+                "isp": p.get("isp"),
+                "isp_price": _parse_float(p.get("isp_price")),
+                "timeInterval_start": p.get("timeInterval_start_loc") or p.get("timeInterval_start"),
+                "timeInterval_end": p.get("timeInterval_end_loc") or p.get("timeInterval_end"),
+            })
+        self.ptu_list = ptu_list
+
+        if ptu_list:
+            latest = max(ptu_list, key=lambda x: x.get("timeInterval_start") or "")
+            self.latest_isp_price = latest["isp_price"]
+            start_str = latest.get("timeInterval_start")
+            if start_str:
+                parsed = dt_util.parse_datetime(start_str)
+                if parsed:
+                    self.latest_date = _as_local_datetime(parsed).date().isoformat()
+                else:
+                    self.latest_date = None
+            else:
+                self.latest_date = None
+        else:
+            self.latest_isp_price = None
+            self.latest_date = None
+
+        return data

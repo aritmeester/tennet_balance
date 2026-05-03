@@ -11,7 +11,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = hass.data[DOMAIN][entry.entry_id]["main"]
     environment_slug = entry.data["environment"].replace(".", "_")
     entity_registry = er.async_get(hass)
 

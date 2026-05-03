@@ -2,7 +2,7 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers import entity_registry as er
-from .const import DOMAIN, SENSOR_DESCRIPTIONS, REGULATION_PRICE_KEYS
+from .const import DOMAIN, SENSOR_DESCRIPTIONS, REGULATION_PRICE_KEYS, SETTLEMENT_SENSOR_DESCRIPTIONS, RECONCILIATION_SENSOR_DESCRIPTIONS
 
 
 REGULATION_STATE_ENUM_MAP = {
@@ -20,7 +20,10 @@ REGULATION_STATE_ICON_MAP = {
 }
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    entry_data = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry_data["main"]
+    settlement_coordinator = entry_data["settlement"]
+    reconciliation_coordinator = entry_data["reconciliation"]
     environment = entry.data["environment"]
     environment_slug = environment.replace(".", "_")
     entity_registry = er.async_get(hass)
@@ -95,6 +98,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 name="API - Opeenvolgende fouten",
             ),
         ]
+    )
+    sensors.extend(
+        TennetSettlementSensor(settlement_coordinator, k, v, environment_slug)
+        for k, v in SETTLEMENT_SENSOR_DESCRIPTIONS.items()
+    )
+    sensors.extend(
+        TennetReconciliationSensor(reconciliation_coordinator, k, v, environment_slug)
+        for k, v in RECONCILIATION_SENSOR_DESCRIPTIONS.items()
     )
     async_add_entities(sensors, update_before_add=True)
 
@@ -313,4 +324,88 @@ class ApiConsecutiveFailuresSensor(_BaseApiDiagnosticSensor):
         return {
             "last_error": self.coordinator.api_last_error,
             "last_error_details": self.coordinator.api_last_error_details,
+        }
+
+
+class TennetSettlementSensor(CoordinatorEntity, SensorEntity):
+    _attr_has_entity_name = False
+
+    def __init__(self, coordinator, key: str, meta: dict, environment_slug: str):
+        super().__init__(coordinator)
+        self._key = key
+        self._field = meta["field"]
+        self._attr_name = meta["name"]
+        self._attr_unique_id = f"tennet_balance_{environment_slug}_{key}"
+        self._attr_translation_key = key
+        self._attr_native_unit_of_measurement = meta.get("unit")
+        self._attr_device_class = meta.get("device_class")
+        self._environment_slug = environment_slug
+
+    @property
+    def available(self):
+        return super().available and self.coordinator.current_ptu is not None
+
+    @property
+    def device_info(self):
+        return DeviceInfo(
+            identifiers={(DOMAIN, f"tennet_settlement_{self._environment_slug}")},
+            name="Settlement Prices",
+            manufacturer="TenneT",
+        )
+
+    @property
+    def native_value(self):
+        ptu = self.coordinator.current_ptu
+        if ptu is None:
+            return None
+        return ptu.get(self._field)
+
+    @property
+    def extra_state_attributes(self):
+        ptu = self.coordinator.current_ptu or {}
+        return {
+            "timeInterval_start": ptu.get("timeInterval_start"),
+            "timeInterval_end": ptu.get("timeInterval_end"),
+            "regulation_state": ptu.get("regulation_state"),
+            "ptu_list": [
+                {"timeInterval_start": p.get("timeInterval_start"), self._field: p.get(self._field)}
+                for p in self.coordinator.ptu_list
+            ],
+        }
+
+
+class TennetReconciliationSensor(CoordinatorEntity, SensorEntity):
+    _attr_has_entity_name = False
+
+    def __init__(self, coordinator, key: str, meta: dict, environment_slug: str):
+        super().__init__(coordinator)
+        self._key = key
+        self._attr_name = meta["name"]
+        self._attr_unique_id = f"tennet_balance_{environment_slug}_{key}"
+        self._attr_translation_key = key
+        self._attr_native_unit_of_measurement = meta.get("unit")
+        self._attr_device_class = meta.get("device_class")
+        self._environment_slug = environment_slug
+
+    @property
+    def available(self):
+        return super().available and self.coordinator.latest_isp_price is not None
+
+    @property
+    def device_info(self):
+        return DeviceInfo(
+            identifiers={(DOMAIN, f"tennet_reconciliation_{self._environment_slug}")},
+            name="Reconciliation Prices",
+            manufacturer="TenneT",
+        )
+
+    @property
+    def native_value(self):
+        return self.coordinator.latest_isp_price
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "latest_date": self.coordinator.latest_date,
+            "ptu_list": self.coordinator.ptu_list,
         }
