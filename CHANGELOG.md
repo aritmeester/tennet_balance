@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2608.5.1
+
+Changes since 2603.6.1:
+
 ### Fixed
 
 - API client now retries transient upstream HTTP responses (`404`, `408`, `429`, `500`, `502`, `503`, `504`) within its existing backoff loop. Setup and polling no longer fail on short-lived TenneT API hiccups such as `TenneT API error: HTTP 404` during the publication delay window.
