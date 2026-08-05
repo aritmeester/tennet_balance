@@ -6,6 +6,7 @@
 
 - API client now retries transient upstream HTTP responses (`404`, `408`, `429`, `500`, `502`, `503`, `504`) within its existing backoff loop. Setup and polling no longer fail on short-lived TenneT API hiccups such as `TenneT API error: HTTP 404` during the publication delay window.
 - Coordinator now tolerates transient `401`/`403` responses after the integration has received data at least once. Previously a single upstream auth blip immediately triggered a reauthentication prompt and stopped the data flow until the integration was reloaded; the coordinator now keeps polling and only raises `ConfigEntryAuthFailed` after several consecutive auth failures (initial setup still fails fast on invalid keys).
+- Coordinator now keeps the last known data (entities stay `available`) for up to 3 minutes after an upstream failure, instead of immediately marking every sensor `unavailable` on a single failed poll or a transient `No data found` response. `API - Last successful update` and `API - Data Delay` still reflect the true staleness, and after the grace window `UpdateFailed` propagates as before.
 
 ## 2603.6.1
 

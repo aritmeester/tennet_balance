@@ -16,6 +16,8 @@ ISP_MINUTES = 15
 MARKET_TIMEZONE = ZoneInfo("Europe/Amsterdam")
 # Consecutive auth failures tolerated after first success before triggering reauth.
 AUTH_FAILURE_THRESHOLD = 5
+# Grace window in which a failed update keeps last-known data (entities stay available).
+UPDATE_GRACE_SECONDS = 180
 
 
 def _parse_float(value) -> float:
@@ -70,6 +72,12 @@ class TennetCoordinator(DataUpdateCoordinator):
 
     async def async_shutdown(self):
         return None
+
+    def _within_update_grace(self) -> bool:
+        if self._api_last_success is None or self.data is None:
+            return False
+        elapsed = (dt_util.utcnow() - self._api_last_success).total_seconds()
+        return elapsed <= UPDATE_GRACE_SECONDS
 
     def _extract_latest_point(self, data):
         try:
@@ -320,11 +328,19 @@ class TennetCoordinator(DataUpdateCoordinator):
                     AUTH_FAILURE_THRESHOLD,
                     err,
                 )
+                if self._within_update_grace():
+                    return self.data
                 raise UpdateFailed(f"TenneT API auth error (transient): {err}") from err
             except TennetApiError as err:
                 self._api_consecutive_failures += 1
                 self._api_last_error = str(err)
                 self._api_last_error_details = err.details
+                if self._within_update_grace():
+                    LOGGER.warning(
+                        "TenneT API error within grace window, keeping last data: %s",
+                        err,
+                    )
+                    return self.data
                 raise UpdateFailed(f"TenneT API error: {err}") from err
             except Exception as err:
                 self._api_consecutive_failures += 1
@@ -333,6 +349,12 @@ class TennetCoordinator(DataUpdateCoordinator):
                     "type": type(err).__name__,
                     "message": str(err),
                 }
+                if self._within_update_grace():
+                    LOGGER.warning(
+                        "TenneT update error within grace window, keeping last data: %s",
+                        err,
+                    )
+                    return self.data
                 raise UpdateFailed(f"Error fetching TenneT data: {err}") from err
             now = dt_util.utcnow()
             self._last_request = now
