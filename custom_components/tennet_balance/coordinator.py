@@ -14,6 +14,8 @@ LOGGER = logging.getLogger(__name__)
 MIN_UPDATE_INTERVAL = 6  # minimum seconds between API calls
 ISP_MINUTES = 15
 MARKET_TIMEZONE = ZoneInfo("Europe/Amsterdam")
+# Consecutive auth failures tolerated after first success before triggering reauth.
+AUTH_FAILURE_THRESHOLD = 5
 
 
 def _parse_float(value) -> float:
@@ -62,6 +64,7 @@ class TennetCoordinator(DataUpdateCoordinator):
         self._api_last_success = None
         self._api_response_time_ms = None
         self._api_consecutive_failures = 0
+        self._api_consecutive_auth_failures = 0
         self._api_last_error = None
         self._api_last_error_details = None
 
@@ -297,12 +300,27 @@ class TennetCoordinator(DataUpdateCoordinator):
                 data = await self.api.get_latest()
             except TennetApiAuthError as err:
                 self._api_consecutive_failures += 1
+                self._api_consecutive_auth_failures += 1
                 self._api_last_error = str(err)
                 self._api_last_error_details = {
                     "type": "TennetApiAuthError",
                     "message": str(err),
+                    "consecutive_auth_failures": self._api_consecutive_auth_failures,
                 }
-                raise ConfigEntryAuthFailed("Invalid API key") from err
+                # Fail fast if we have never received data; otherwise tolerate a short streak
+                # of auth errors so the coordinator can self-heal from transient upstream blips.
+                if (
+                    self._api_last_success is None
+                    or self._api_consecutive_auth_failures >= AUTH_FAILURE_THRESHOLD
+                ):
+                    raise ConfigEntryAuthFailed("Invalid API key") from err
+                LOGGER.warning(
+                    "TenneT API auth error (transient, %s/%s): %s",
+                    self._api_consecutive_auth_failures,
+                    AUTH_FAILURE_THRESHOLD,
+                    err,
+                )
+                raise UpdateFailed(f"TenneT API auth error (transient): {err}") from err
             except TennetApiError as err:
                 self._api_consecutive_failures += 1
                 self._api_last_error = str(err)
@@ -321,6 +339,7 @@ class TennetCoordinator(DataUpdateCoordinator):
             self._api_last_success = now
             self._api_response_time_ms = int((now - request_start).total_seconds() * 1000)
             self._api_consecutive_failures = 0
+            self._api_consecutive_auth_failures = 0
             self._api_last_error = None
             self._api_last_error_details = None
             if self._keep_last_regulation_prices:
