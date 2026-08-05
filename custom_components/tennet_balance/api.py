@@ -8,6 +8,8 @@ LOGGER = logging.getLogger(__name__)
 
 MAX_ATTEMPTS = 3
 BACKOFF_SECONDS = 0.5
+# Upstream statuses treated as transient and retried within a single call.
+RETRYABLE_STATUSES = frozenset({404, 408, 429, 500, 502, 503, 504})
 
 
 class TennetApiAuthError(Exception):
@@ -86,13 +88,26 @@ class TennetApiClient:
                             payload=payload,
                         )
 
-                    if resp.status >= 400:
+                    if resp.status in RETRYABLE_STATUSES:
+                        last_error = TennetApiError(
+                            f"HTTP {resp.status}",
+                            status=resp.status,
+                            payload=payload,
+                        )
+                        LOGGER.warning(
+                            "TenneT API returned HTTP %s (attempt %s/%s)",
+                            resp.status,
+                            attempt,
+                            MAX_ATTEMPTS,
+                        )
+                    elif resp.status >= 400:
                         raise TennetApiError(
                             f"HTTP {resp.status}",
                             status=resp.status,
                             payload=payload,
                         )
-                    return payload
+                    else:
+                        return payload
             except (asyncio.TimeoutError, OSError, aiohttp.ClientError) as err:
                 last_error = err
                 LOGGER.warning(
