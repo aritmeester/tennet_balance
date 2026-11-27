@@ -100,6 +100,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class TennetPointSensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = False
+    _unrecorded_attributes = frozenset({"start", "end"})
 
     async def async_update(self):
         await self.coordinator.async_request_refresh()
@@ -177,6 +178,7 @@ class TennetPointSensor(CoordinatorEntity, SensorEntity):
 
 class _BaseRegulationStateSensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = False
+    _unrecorded_attributes = frozenset({"latest_interval_end"})
 
     def __init__(
         self,

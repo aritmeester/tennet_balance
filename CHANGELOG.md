@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 2611.27.1
+
+Changes since 2608.5.1:
+
+### Changed
+
+- Reduce Recorder attribute storage by excluding the high-frequency `start` and `end` timestamps from measurement sensor history and `latest_interval_end` from regulation-state sensor history.
+- All three attributes remain available on live entities. Historical ISP boundaries (`current_isp_start` and `previous_isp_start`) are retained.
+- Polling frequency, sensor values, entity identifiers and statistics metadata are unchanged. This optimization targets stored attributes, not the number of state records.
+
 ## 2608.5.1
 
 Changes since 2603.6.1:
