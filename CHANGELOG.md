@@ -2,6 +2,51 @@
 
 ## Unreleased
 
+## 2611.27.2b2
+
+Changes since 2611.27.2b1:
+
+### Added
+
+- Request rate limiting across all HTTP attempts, including retries
+  and authentication requests.
+- Support for HTTP Retry-After headers.
+- Structural validation of API measurement payloads.
+- Extended API request, failure and recovery diagnostics.
+- Automated regression tests covering API handling, rate limiting,
+  coordinator recovery, lifecycle management and diagnostics.
+
+### Changed
+
+- Improved HTTP response classification and retry handling.
+- Introduced bounded request timeouts and an overall retry budget.
+- Use monotonic timing for coordinator throttling and the
+  availability grace period.
+- Reduce repetitive logging during prolonged API failures.
+- Use native Home Assistant coordinator lifecycle management.
+
+### Fixed
+
+- Structured API errors could bypass retry handling.
+- Non-JSON authentication responses could bypass reauthentication.
+- Failed requests and internal retries could bypass rate limiting.
+- Invalid measurement payloads could replace previously valid data.
+- Non-consecutive authentication failures could incorrectly trigger
+  reauthentication.
+- Throttled refreshes could incorrectly indicate successful recovery.
+- Coordinator shutdown previously bypassed native cleanup.
+
+### Compatibility
+
+- Normal 12-second polling interval remains unchanged.
+- The 180-second availability grace period remains unchanged.
+- Existing entity IDs, unique IDs, sensor states and attributes
+  remain unchanged.
+- Regulation-state calculations and regulation-price retention
+  remain unchanged.
+- Recorder attribute exclusions introduced in 2611.27.1 are preserved.
+- Coordinator caching introduced in 2611.27.2b1 is preserved.
+
 ## 2611.27.2b1
 
 Changes since 2611.27.1:
