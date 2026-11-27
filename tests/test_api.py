@@ -79,7 +79,9 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
     async def test_success_unchanged(self):
         data = fixture()
         c, s = self.client(Response(200, data))
-        self.assertIs(await c.get_latest(), data)
+        with patch.object(c, "redact", wraps=c.redact) as redact:
+            self.assertIs(await c.get_latest(), data)
+            redact.assert_not_called()
         self.assertEqual(len(s.calls), 1)
         self.assertFalse(s.calls[0][1]["allow_redirects"])
         self.assertEqual(c.request_diagnostics["last_attempt_count"], 1)
@@ -149,6 +151,7 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaisesRegex(api.TennetApiError, "time budget"):
                 await c.get_latest()
         self.assertEqual(len(s.calls), 0)
+        self.assertTrue(c.request_diagnostics["refresh_budget_exhausted"])
 
     async def test_environment_shared_across_clients(self):
         hass = SimpleNamespace(data={})

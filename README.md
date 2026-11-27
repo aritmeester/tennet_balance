@@ -77,7 +77,29 @@ The current quarter-hour sensor is a prediction based on snapshots received so f
 
 ## Update strategy
 
-The integration schedules the next update every 12 seconds ensuring minimal delay and compliance with API guidelines.
+The integration schedules normal updates every 12 seconds. Every HTTP
+attempt, including retries and reauthentication checks, is subject to a
+rate limiter enforcing at most 10 requests per rolling 60 seconds and
+at least one second between requests. Limits are shared per API environment
+within this Home Assistant instance; requests made by external clients are
+not counted.
+
+Transient failures are retried up to three total attempts per refresh,
+with a 15-second request timeout and a 45-second overall refresh budget.
+The overall budget includes retry delays and rate-limit waits. A server
+`Retry-After` header is respected; a 429 without a usable header imposes
+a 60-second cooldown. Normal healthy polling does not wait on the limiter.
+
+After a successful update, failed refreshes retain the last valid data
+for up to 180 seconds, evaluated when a refresh completes. Entities become
+unavailable after that grace period if refreshes continue failing. A valid
+response resets the failure counters. Five consecutive authentication
+failures after initial success trigger reauthentication; an authentication
+failure during initial setup triggers it immediately.
+
+Structurally invalid measurement payloads are rejected instead of replacing
+last-known data. An HTTP success does not by itself guarantee fresh market
+data; use the API data-delay diagnostic when evaluating data freshness.
 
 ## Changelog
 
@@ -85,7 +107,8 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## Development & Testing
 
-The repository includes standalone unit tests for the coordinator.
+The repository includes standalone unit tests for the API client, rate limiter,
+coordinator, lifecycle wiring and diagnostics.
 These tests use synthetic API responses and lightweight Home Assistant
 stubs, allowing them to run without a Home Assistant installation
 or a TenneT API key.
@@ -120,7 +143,7 @@ python -m unittest discover -s tests -p test_coordinator_cache.py -v
 
 ### Test coverage
 
-The coordinator cache tests cover:
+The regression tests cover:
 
 - ISP analysis caching and invalidation
 - Latest measurement point caching
@@ -130,6 +153,11 @@ The coordinator cache tests cover:
 - Dynamic API data delay calculations
 - Regulation price retention
 - Cache isolation between coordinator instances
+- HTTP response classification, retry exhaustion and rate limiting
+- Malformed API responses, authentication failures and recovery
+- Monotonic grace-period timing and cancellation
+- Config entry lifecycle wiring and diagnostic credential redaction
+- Combined API-client and coordinator failure/recovery behavior
 
 ### Validation before releasing
 
@@ -209,10 +237,11 @@ logger:
 
 ## Troubleshooting
 
-- If the API returns `{"error":"No data found"}`, the integration treats this as an API error for that update.
-- If the API returns a structured error payload (for example with `Error_message`), the update is also marked as failed.
-- During failed updates, point-based sensors become unavailable until valid data is received again.
+- `{"error":"No data found"}` and transient HTTP errors are retried within the configured limits.
+- Persistent API errors or invalid measurement payloads do not replace the last valid measurements.
+- During the 180-second grace period, entities can remain available with last-known values. Check the API data-delay diagnostic before using data that must be fresh.
+- Rate limiting can delay or suppress retries. Healthy polling retains the normal 12-second schedule.
 - Diagnostic sensor `API - Consecutive Failures` exposes:
   - `last_error`
   - `last_error_details` (including error type/message and payload details when available)
-- Full integration diagnostics are available via **Settings → Devices & Services → TenneT Balance Delta → Download diagnostics**.
+- Full integration diagnostics are available via **Settings → Devices & Services → TenneT Balance Delta → Download diagnostics**. They include the last failed refresh, authentication failure count, grace-period status and HTTP attempt information (last status, retry reason, rate-limit wait and overall refresh-budget exhaustion).

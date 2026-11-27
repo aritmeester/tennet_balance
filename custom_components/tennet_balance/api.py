@@ -127,6 +127,7 @@ class TennetApiClient:
         self._last_http_status = None
         self._last_retry_reason = None
         self._rate_limit_wait_seconds = 0.0
+        self._refresh_budget_exhausted = False
 
     def redact(self, value):
         """Remove credentials from upstream diagnostic values, including strings."""
@@ -148,6 +149,7 @@ class TennetApiClient:
             "last_http_status": self._last_http_status,
             "last_retry_reason": self._last_retry_reason,
             "rate_limit_wait_seconds": round(self._rate_limit_wait_seconds, 3),
+            "refresh_budget_exhausted": self._refresh_budget_exhausted,
         }
 
     async def _request(self, session, url, headers) -> dict:
@@ -164,6 +166,11 @@ class TennetApiClient:
                 decoded = await resp.json(content_type=None)
             except (ValueError, UnicodeError, TimeoutError, aiohttp.ClientError):
                 decoded = None
+            if (200 <= status < 300 and isinstance(decoded, dict)
+                    and not _extract_payload_error(decoded)[0]):
+                _validate_measurements(decoded)
+                # No diagnostic copy/redaction of the full rolling window on healthy polls.
+                return decoded
             payload = self.redact(decoded) if isinstance(decoded, dict) else {}
             message, error_id = _extract_payload_error(payload)
             context = dict(status=status, error_id=error_id, payload=payload)
@@ -180,9 +187,7 @@ class TennetApiClient:
                 raise TennetApiNoDataError(message, **context)
             if message:
                 raise TennetApiError(message, **context)
-            _validate_measurements(decoded)
-            # Do not mutate the live measurement payload or its field values.
-            return decoded
+            raise _RetryableError("Invalid API response", status=status)
 
     async def get_latest(self) -> dict:
         url = f"{self._base_url}/publications/v1/balance-delta-high-res/latest"
@@ -192,6 +197,7 @@ class TennetApiClient:
         self._last_http_status = None
         self._last_retry_reason = None
         self._rate_limit_wait_seconds = 0.0
+        self._refresh_budget_exhausted = False
         last_error = None
         try:
             async with asyncio.timeout(REFRESH_BUDGET_SECONDS):
@@ -214,6 +220,7 @@ class TennetApiClient:
                     if attempt < MAX_ATTEMPTS:
                         await asyncio.sleep(BACKOFF_SECONDS * attempt)
         except TimeoutError as err:
+            self._refresh_budget_exhausted = True
             if last_error is not None:
                 raise last_error from err
             raise TennetApiError("API refresh time budget exhausted") from err
