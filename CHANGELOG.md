@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 2611.27.2
+
+Changes since 2611.27.1:
+
+### Changed
+
+- Cache the latest measurement point and quarter-hour regulation-state analysis per published API payload, avoiding repeated extraction and analysis during entity updates.
+- Reuse derived results when a throttled or failed refresh retains the same payload. API data-delay calculations continue to reflect the current time.
+- Preserve the existing regulation algorithm, 12-second polling interval, API error handling, sensor states, attributes, identifiers, and Recorder attribute exclusions.
+
+### Added
+
+- Standalone coordinator cache regression tests using synthetic measurement payloads and lightweight Home Assistant stubs.
+
 ## 2611.27.1
 
 Changes since 2608.5.1:

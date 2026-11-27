@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import timedelta
 import logging
 from zoneinfo import ZoneInfo
@@ -18,6 +19,8 @@ MARKET_TIMEZONE = ZoneInfo("Europe/Amsterdam")
 AUTH_FAILURE_THRESHOLD = 5
 # Grace window in which a failed update keeps last-known data (entities stay available).
 UPDATE_GRACE_SECONDS = 180
+
+_CACHE_MISS = object()
 
 
 def _parse_float(value) -> float:
@@ -69,6 +72,16 @@ class TennetCoordinator(DataUpdateCoordinator):
         self._api_consecutive_auth_failures = 0
         self._api_last_error = None
         self._api_last_error_details = None
+        self._cached_payload = _CACHE_MISS
+        self._cached_latest_point = _CACHE_MISS
+        self._cached_isp_analysis = _CACHE_MISS
+
+    def _ensure_payload_cache(self):
+        """Invalidate derived values when the coordinator publishes a new payload."""
+        if self.data is not self._cached_payload:
+            self._cached_payload = self.data
+            self._cached_latest_point = _CACHE_MISS
+            self._cached_isp_analysis = _CACHE_MISS
 
     async def async_shutdown(self):
         return None
@@ -176,6 +189,13 @@ class TennetCoordinator(DataUpdateCoordinator):
         return grouped
 
     def _rule_state_2_window_analysis(self):
+        """Reuse the ISP analysis for the currently published payload."""
+        self._ensure_payload_cache()
+        if self._cached_isp_analysis is _CACHE_MISS:
+            self._cached_isp_analysis = self._calculate_rule_state_2_window_analysis()
+        return self._cached_isp_analysis
+
+    def _calculate_rule_state_2_window_analysis(self):
         all_points = self._extract_all_points(self.data)
         if not all_points:
             return None
@@ -230,7 +250,8 @@ class TennetCoordinator(DataUpdateCoordinator):
 
     @property
     def rule_state_2_analysis(self):
-        return self._rule_state_2_window_analysis()
+        # Preserve the original fresh-dictionary behavior for callers.
+        return deepcopy(self._rule_state_2_window_analysis())
 
     @property
     def api_last_success(self):
@@ -283,7 +304,10 @@ class TennetCoordinator(DataUpdateCoordinator):
     @property
     def latest_point(self):
         LOGGER.debug("TennetCoordinator: Accessing latest_point")
-        return self._extract_latest_point(self.data)
+        self._ensure_payload_cache()
+        if self._cached_latest_point is _CACHE_MISS:
+            self._cached_latest_point = self._extract_latest_point(self.data)
+        return self._cached_latest_point
 
     def get_last_known_value(self, key):
         return self._last_known_values.get(key)

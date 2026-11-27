@@ -3,6 +3,7 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Integration-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/release/aritmeester/tennet_balance.svg)](https://github.com/aritmeester/tennet_balance/releases)
 [![GitHub Issues](https://img.shields.io/github/issues/aritmeester/tennet_balance)](https://github.com/aritmeester/tennet_balance/issues)
+[![Validation](https://github.com/aritmeester/tennet_balance/actions/workflows/validate.yml/badge.svg)](https://github.com/aritmeester/tennet_balance/actions/workflows/validate.yml)
 
 Home Assistant custom integration for the TenneT Balance Delta High Resolution API.
 
@@ -81,6 +82,90 @@ The integration schedules the next update every 12 seconds ensuring minimal dela
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for release history.
+
+## Development & Testing
+
+The repository includes standalone unit tests for the coordinator.
+These tests use synthetic API responses and lightweight Home Assistant
+stubs, allowing them to run without a Home Assistant installation
+or a TenneT API key.
+
+### Prerequisites
+
+- Python 3.12 or newer
+- Development dependencies listed in `requirements-dev.txt`
+
+Install the development dependencies from the repository root:
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
+The `tzdata` package provides the IANA time zone database required
+by Python's `zoneinfo` module, particularly on Windows.
+
+### Running tests
+
+Run all unit tests from the repository root:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+To run only the coordinator cache tests:
+
+```bash
+python -m unittest discover -s tests -p test_coordinator_cache.py -v
+```
+
+### Test coverage
+
+The coordinator cache tests cover:
+
+- ISP analysis caching and invalidation
+- Latest measurement point caching
+- Empty API payload handling and recovery
+- Protection against mutation of cached analysis results
+- API throttling and grace period behavior
+- Dynamic API data delay calculations
+- Regulation price retention
+- Cache isolation between coordinator instances
+
+### Validation before releasing
+
+Before creating a release:
+
+1. Ensure all unit tests pass.
+2. Verify the manifest version and changelog entry.
+3. Ensure the Home Assistant Validate GitHub Actions workflow succeeds.
+4. Follow the release procedure described in [RELEASING.md](RELEASING.md).
+
+The standalone unit tests complement HACS and hassfest validation
+but do not replace runtime testing within Home Assistant.
+
+### Continuous Integration
+
+The GitHub Actions workflow automatically validates the integration
+on every push and pull request. It can also be triggered manually.
+
+The workflow includes:
+
+- HACS integration validation
+- Home Assistant hassfest validation
+- Python syntax validation
+- Automated unit tests
+
+Unit tests run against the following platform and Python combinations:
+
+| Platform | Python versions |
+|----------|-----------------|
+| Ubuntu   | 3.12, 3.14      |
+| Windows  | 3.12, 3.14      |
+
+All validation jobs must succeed before creating a release.
+
+See the [Home Assistant Validate workflow](.github/workflows/validate.yml)
+for the complete configuration.
 
 ## Debugging
 
