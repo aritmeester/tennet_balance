@@ -1,6 +1,7 @@
 from copy import deepcopy
 from datetime import timedelta
 import logging
+from time import monotonic
 from zoneinfo import ZoneInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.exceptions import ConfigEntryAuthFailed
@@ -12,7 +13,7 @@ from .api import TennetApiAuthError, TennetApiError
 
 LOGGER = logging.getLogger(__name__)
 
-MIN_UPDATE_INTERVAL = 6  # minimum seconds between API calls
+MIN_UPDATE_INTERVAL = 6  # coalesce healthy refreshes; HTTP limits live in the API client
 ISP_MINUTES = 15
 MARKET_TIMEZONE = ZoneInfo("Europe/Amsterdam")
 # Consecutive auth failures tolerated after first success before triggering reauth.
@@ -63,10 +64,11 @@ class TennetCoordinator(DataUpdateCoordinator):
         super().__init__(hass, LOGGER, name="TenneT Balance Delta", update_interval=timedelta(seconds=12))
         self.api = api
         self._keep_last_regulation_prices = keep_last_regulation_prices
-        self._last_request = dt_util.utcnow() - timedelta(seconds=MIN_UPDATE_INTERVAL)
+        self._last_success_monotonic = None
         self._update_lock = asyncio.Lock()  # ensures only one fetch at a time
         self._last_known_values = {}
         self._api_last_success = None
+        self._api_last_failure = None
         self._api_response_time_ms = None
         self._api_consecutive_failures = 0
         self._api_consecutive_auth_failures = 0
@@ -87,9 +89,9 @@ class TennetCoordinator(DataUpdateCoordinator):
         return None
 
     def _within_update_grace(self) -> bool:
-        if self._api_last_success is None or self.data is None:
+        if self._last_success_monotonic is None or self.data is None:
             return False
-        elapsed = (dt_util.utcnow() - self._api_last_success).total_seconds()
+        elapsed = monotonic() - self._last_success_monotonic
         return elapsed <= UPDATE_GRACE_SECONDS
 
     def _extract_latest_point(self, data):
@@ -316,78 +318,64 @@ class TennetCoordinator(DataUpdateCoordinator):
     def keep_last_regulation_prices(self):
         return self._keep_last_regulation_prices
 
+    def _record_failure(self, message, details, *, auth=False):
+        """Count failed refreshes, not individual HTTP attempts."""
+        self._api_last_failure = dt_util.utcnow()
+        self._api_consecutive_failures += 1
+        if auth:
+            self._api_consecutive_auth_failures += 1
+            details = {**details, "consecutive_auth_failures": self._api_consecutive_auth_failures}
+        else:
+            self._api_consecutive_auth_failures = 0
+        self._api_last_error = message
+        self._api_last_error_details = details
+
+    def _handle_refresh_failure(self, message):
+        """Keep valid data during grace; otherwise signal failure to HA."""
+        if self._within_update_grace():
+            LOGGER.warning("TenneT refresh failed within grace window, keeping last data: %s", message)
+            return self.data
+        raise UpdateFailed(message)
+
     async def _async_update_data(self):
-        """Fetch data from API with throttling and single-update lock."""
+        """Fetch data while preserving last-valid payload and availability semantics."""
         async with self._update_lock:
-            now = dt_util.utcnow()
-            seconds_since_last = (now - self._last_request).total_seconds()
+            # Only coalesce healthy updates. A failed refresh must never turn
+            # into a successful coordinator update just by returning cached data.
+            if (
+                self._last_success_monotonic is not None
+                and self.data is not None
+                and self.last_update_success
+                and self._api_consecutive_failures == 0
+                and monotonic() - self._last_success_monotonic < MIN_UPDATE_INTERVAL
+            ):
+                LOGGER.debug("TenneT: coalescing healthy refresh")
+                return self.data
 
-            if seconds_since_last < MIN_UPDATE_INTERVAL:
-                LOGGER.debug(f"TennetCoordinator: Returning cached data, {seconds_since_last:.2f}s since last request")
-                return self.data  # use cached data if called too soon
-
-            LOGGER.debug("TennetCoordinator: Fetching new data from API")
-            request_start = dt_util.utcnow()
+            request_start = monotonic()
             try:
                 data = await self.api.get_latest()
             except TennetApiAuthError as err:
-                self._api_consecutive_failures += 1
-                self._api_consecutive_auth_failures += 1
-                self._api_last_error = str(err)
-                self._api_last_error_details = {
-                    "type": "TennetApiAuthError",
-                    "message": str(err),
-                    "consecutive_auth_failures": self._api_consecutive_auth_failures,
-                }
-                # Fail fast if we have never received data; otherwise tolerate a short streak
-                # of auth errors so the coordinator can self-heal from transient upstream blips.
+                self._record_failure(str(err), err.details, auth=True)
                 if (
                     self._api_last_success is None
                     or self._api_consecutive_auth_failures >= AUTH_FAILURE_THRESHOLD
                 ):
                     raise ConfigEntryAuthFailed("Invalid API key") from err
-                LOGGER.warning(
-                    "TenneT API auth error (transient, %s/%s): %s",
-                    self._api_consecutive_auth_failures,
-                    AUTH_FAILURE_THRESHOLD,
-                    err,
-                )
-                if self._within_update_grace():
-                    return self.data
-                raise UpdateFailed(f"TenneT API auth error (transient): {err}") from err
+                return self._handle_refresh_failure(f"TenneT API auth error (transient): {err}")
             except TennetApiError as err:
-                self._api_consecutive_failures += 1
-                self._api_last_error = str(err)
-                self._api_last_error_details = err.details
-                if self._within_update_grace():
-                    LOGGER.warning(
-                        "TenneT API error within grace window, keeping last data: %s",
-                        err,
-                    )
-                    return self.data
-                raise UpdateFailed(f"TenneT API error: {err}") from err
+                self._record_failure(str(err), err.details)
+                return self._handle_refresh_failure(f"TenneT API error: {err}")
             except Exception as err:
-                self._api_consecutive_failures += 1
-                self._api_last_error = str(err)
-                self._api_last_error_details = {
-                    "type": type(err).__name__,
-                    "message": str(err),
-                }
-                if self._within_update_grace():
-                    LOGGER.warning(
-                        "TenneT update error within grace window, keeping last data: %s",
-                        err,
-                    )
-                    return self.data
-                raise UpdateFailed(f"Error fetching TenneT data: {err}") from err
-            now = dt_util.utcnow()
-            self._last_request = now
-            self._api_last_success = now
-            self._api_response_time_ms = int((now - request_start).total_seconds() * 1000)
-            self._api_consecutive_failures = 0
-            self._api_consecutive_auth_failures = 0
-            self._api_last_error = None
-            self._api_last_error_details = None
+                # Avoid forwarding arbitrary exception text that might contain credentials.
+                message = f"Unexpected TenneT refresh error: {type(err).__name__}"
+                self._record_failure(message, {"type": type(err).__name__, "message": message})
+                try:
+                    return self._handle_refresh_failure(message)
+                except UpdateFailed:
+                    raise UpdateFailed(message) from None
+
+            # Preserve the existing optional last-known price behavior.
             if self._keep_last_regulation_prices:
                 point = self._extract_latest_point(data)
                 if point:
@@ -397,6 +385,14 @@ class TennetCoordinator(DataUpdateCoordinator):
                             continue
                         try:
                             self._last_known_values[key] = float(value)
-                        except (TypeError, ValueError):
+                        except (TypeError, ValueError, OverflowError):
                             continue
+            now = monotonic()
+            self._last_success_monotonic = now
+            self._api_last_success = dt_util.utcnow()
+            self._api_response_time_ms = int((now - request_start) * 1000)
+            self._api_consecutive_failures = 0
+            self._api_consecutive_auth_failures = 0
+            self._api_last_error = None
+            self._api_last_error_details = None
             return data

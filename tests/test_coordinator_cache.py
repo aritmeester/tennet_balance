@@ -18,6 +18,7 @@ from unittest.mock import AsyncMock, patch
 class StubCoordinator:
     def __init__(self, hass, logger, *, name, update_interval):
         self.data = None
+        self.last_update_success = True
         self.update_interval = update_interval
 
 
@@ -27,7 +28,11 @@ class ApiError(Exception):
         return {"message": str(self)}
 
 
-class AuthError(Exception):
+class AuthError(ApiError):
+    pass
+
+
+class ConfigEntryAuthFailed(Exception):
     pass
 
 
@@ -52,7 +57,7 @@ def load_coordinator(path):
     update = modules["homeassistant.helpers.update_coordinator"]
     update.DataUpdateCoordinator = StubCoordinator
     update.UpdateFailed = UpdateFailed
-    modules["homeassistant.exceptions"].ConfigEntryAuthFailed = AuthError
+    modules["homeassistant.exceptions"].ConfigEntryAuthFailed = ConfigEntryAuthFailed
     dt = modules["homeassistant.util.dt"]
     dt.UTC = timezone.utc
     dt.utcnow = lambda: datetime.now(timezone.utc)
@@ -97,6 +102,9 @@ class CacheTests(unittest.IsolatedAsyncioTestCase):
         self.clock_patch = patch.object(module.dt_util, "utcnow", side_effect=lambda: self.clock)
         self.clock_patch.start()
         self.addCleanup(self.clock_patch.stop)
+        self.monotonic = patch.object(module, "monotonic", side_effect=lambda: self.clock.timestamp())
+        self.monotonic.start()
+        self.addCleanup(self.monotonic.stop)
         self.coordinator = module.TennetCoordinator(None, self.api, True)
 
     async def test_single_analysis_per_payload(self):
