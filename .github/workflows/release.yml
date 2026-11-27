@@ -99,3 +99,4 @@ jobs:
           tag_name: v${{ inputs.version }}
           name: v${{ inputs.version }}
           body_path: RELEASE_NOTES.md
+          prerelease: ${{ contains(inputs.version, 'b') }}

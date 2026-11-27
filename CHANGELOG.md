@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 2611.27.2
+## 2611.27.2b1
 
 Changes since 2611.27.1:
 
@@ -15,6 +15,10 @@ Changes since 2611.27.1:
 ### Added
 
 - Standalone coordinator cache regression tests using synthetic measurement payloads and lightweight Home Assistant stubs.
+- Automated cross-platform unit testing through GitHub Actions,
+  covering Ubuntu and Windows with Python 3.12 and 3.14.
+- Development dependency configuration and documentation for
+  running the test suite locally.
 
 ## 2611.27.1
 
