@@ -15,7 +15,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         CONF_KEEP_LAST_REGULATION_PRICES,
         entry.data.get(CONF_KEEP_LAST_REGULATION_PRICES, False),
     )
-    coordinator = TennetCoordinator(hass, api, keep_last_regulation_prices)
+    # Native coordinator registers shutdown and binds scheduled refresh tasks to the entry.
+    coordinator = TennetCoordinator(
+        hass, api, keep_last_regulation_prices, config_entry=entry
+    )
     await coordinator.async_config_entry_first_refresh()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
@@ -26,7 +29,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        coordinator = hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
-        if coordinator is not None:
-            await coordinator.async_shutdown()
+        # Home Assistant calls the coordinator's registered unload callback.
+        hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
     return unload_ok

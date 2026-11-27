@@ -16,10 +16,20 @@ from unittest.mock import AsyncMock, patch
 
 
 class StubCoordinator:
-    def __init__(self, hass, logger, *, name, update_interval):
+    def __init__(self, hass, logger, *, name, update_interval, config_entry=None):
         self.data = None
         self.last_update_success = True
         self.update_interval = update_interval
+        self.config_entry = config_entry
+        self.shutdown_count = 0
+        if config_entry is not None:
+            config_entry.async_on_unload(self.async_shutdown)
+
+    async def async_shutdown(self):
+        self.shutdown_count += 1
+
+    async def async_config_entry_first_refresh(self):
+        self.data = await self._async_update_data()
 
 
 class ApiError(Exception):

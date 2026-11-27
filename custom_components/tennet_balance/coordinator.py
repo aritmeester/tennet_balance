@@ -60,8 +60,11 @@ def _regulation_state_code(has_upward: bool, has_downward: bool) -> int:
     return 0
 
 class TennetCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass, api, keep_last_regulation_prices: bool = False):
-        super().__init__(hass, LOGGER, name="TenneT Balance Delta", update_interval=timedelta(seconds=12))
+    def __init__(self, hass, api, keep_last_regulation_prices: bool = False, *, config_entry=None):
+        super().__init__(
+            hass, LOGGER, config_entry=config_entry,
+            name="TenneT Balance Delta", update_interval=timedelta(seconds=12),
+        )
         self.api = api
         self._keep_last_regulation_prices = keep_last_regulation_prices
         self._last_success_monotonic = None
@@ -84,9 +87,6 @@ class TennetCoordinator(DataUpdateCoordinator):
             self._cached_payload = self.data
             self._cached_latest_point = _CACHE_MISS
             self._cached_isp_analysis = _CACHE_MISS
-
-    async def async_shutdown(self):
-        return None
 
     def _within_update_grace(self) -> bool:
         if self._last_success_monotonic is None or self.data is None:
@@ -260,6 +260,18 @@ class TennetCoordinator(DataUpdateCoordinator):
         return self._api_last_success
 
     @property
+    def api_last_failure(self):
+        return self._api_last_failure
+
+    @property
+    def api_consecutive_auth_failures(self):
+        return self._api_consecutive_auth_failures
+
+    @property
+    def api_grace_active(self):
+        return self._api_consecutive_failures > 0 and self._within_update_grace()
+
+    @property
     def api_response_time_ms(self):
         return self._api_response_time_ms
 
@@ -333,7 +345,8 @@ class TennetCoordinator(DataUpdateCoordinator):
     def _handle_refresh_failure(self, message):
         """Keep valid data during grace; otherwise signal failure to HA."""
         if self._within_update_grace():
-            LOGGER.warning("TenneT refresh failed within grace window, keeping last data: %s", message)
+            log = LOGGER.warning if self._api_consecutive_failures == 1 else LOGGER.debug
+            log("TenneT refresh failed within grace window, keeping last data: %s", message)
             return self.data
         raise UpdateFailed(message)
 
@@ -387,6 +400,8 @@ class TennetCoordinator(DataUpdateCoordinator):
                             self._last_known_values[key] = float(value)
                         except (TypeError, ValueError, OverflowError):
                             continue
+            if self._api_consecutive_failures and self.last_update_success:
+                LOGGER.info("TenneT API recovered after %s failed refresh(es)", self._api_consecutive_failures)
             now = monotonic()
             self._last_success_monotonic = now
             self._api_last_success = dt_util.utcnow()
